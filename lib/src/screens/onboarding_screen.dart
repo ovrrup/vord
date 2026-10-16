@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
@@ -338,9 +339,9 @@ class _GraphicPainter extends CustomPainter {
 
         const dotCount = 4;
         for (var i = 0; i < dotCount; i++) {
-          final angle = (i * (2 * 3.1415926535 / dotCount)) - (3.1415926535 / 2);
-          final x = center.dx + 60 * (i == 1 || i == 3 ? (i == 1 ? 1 : -1) : 0);
-          final y = center.dy + 60 * (i == 0 ? -1 : (i == 2 ? 1 : 0));
+          final angle = (i * (2 * math.pi / dotCount)) - (math.pi / 2);
+          final x = center.dx + 60 * math.cos(angle);
+          final y = center.dy + 60 * math.sin(angle);
 
           final dotPaint = Paint()
             ..color = i == 0 ? AppTheme.textPrimary : const Color(0x667A7F8D)
