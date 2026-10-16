@@ -15,7 +15,6 @@ class AppTheme {
       scaffoldBackgroundColor: background,
       primaryColor: textPrimary,
       colorScheme: const ColorScheme.dark(
-        background: background,
         surface: surface,
         primary: textPrimary,
         secondary: accent,

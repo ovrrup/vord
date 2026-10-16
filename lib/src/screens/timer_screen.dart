@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../models/session_mode.dart';
 import '../models/timer_status.dart';
@@ -187,7 +186,7 @@ class _TimerScreenState extends State<TimerScreen> {
                           shape: BoxShape.circle,
                           color: isFilled
                               ? AppTheme.textPrimary
-                              : AppTheme.accentMuted.withOpacity(0.4),
+                              : const Color(0x662E323D),
                         ),
                       );
                     }),

@@ -59,7 +59,7 @@ class _RingPainter extends CustomPainter {
 
     // Background track (subtle, muted)
     final trackPaint = Paint()
-      ..color = AppTheme.accentMuted.withOpacity(0.4)
+      ..color = const Color(0x662E323D)
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth;
 

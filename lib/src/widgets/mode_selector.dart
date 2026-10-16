@@ -17,10 +17,10 @@ class ModeSelector extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: AppTheme.surface.withOpacity(0.6),
+        color: const Color(0x9916181D),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppTheme.accentMuted.withOpacity(0.3),
+          color: const Color(0x4D2E323D),
           width: 1,
         ),
       ),
@@ -38,7 +38,7 @@ class ModeSelector extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppTheme.accentMuted.withOpacity(0.8)
+                    ? const Color(0xCC2E323D)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(16),
               ),
@@ -50,7 +50,7 @@ class ModeSelector extends StatelessWidget {
                   letterSpacing: 0.3,
                   color: isSelected
                       ? mode.accentColor
-                      : AppTheme.textSecondary.withOpacity(0.8),
+                      : const Color(0xCC7A7F8D),
                 ),
               ),
             ),
