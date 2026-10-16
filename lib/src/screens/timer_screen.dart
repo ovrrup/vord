@@ -10,7 +10,12 @@ import '../widgets/pomodoro_tomato_timer.dart';
 import '../widgets/session_history_sheet.dart';
 
 class TimerScreen extends StatefulWidget {
-  const TimerScreen({super.key});
+  final bool animateBackground;
+
+  const TimerScreen({
+    super.key,
+    this.animateBackground = true,
+  });
 
   @override
   State<TimerScreen> createState() => _TimerScreenState();
@@ -155,6 +160,7 @@ class _TimerScreenState extends State<TimerScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF070204), // Deep black-cherry
       body: GlazedCherryBackground(
+        animate: widget.animateBackground,
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),

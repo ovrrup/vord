@@ -9,7 +9,10 @@ void main() {
 
   testWidgets('First launch shows onboarding flow and completes to tomato timer', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({'has_seen_onboarding': false});
-    await tester.pumpWidget(const VordApp(hasSeenOnboarding: false));
+    await tester.pumpWidget(const VordApp(
+      hasSeenOnboarding: false,
+      animateBackground: false,
+    ));
 
     // Verify first onboarding slide
     expect(find.text('VORD'), findsOneWidget);
@@ -40,7 +43,10 @@ void main() {
 
   testWidgets('Subsequent launch bypasses onboarding directly to Pomodoro timer', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({'has_seen_onboarding': true});
-    await tester.pumpWidget(const VordApp(hasSeenOnboarding: true));
+    await tester.pumpWidget(const VordApp(
+      hasSeenOnboarding: true,
+      animateBackground: false,
+    ));
 
     // Verify onboarding is bypassed and timer screen is immediately visible
     expect(find.text('01 / PHILOSOPHY'), findsNothing);
@@ -50,7 +56,10 @@ void main() {
 
   testWidgets('Onboarding skip button test', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({'has_seen_onboarding': false});
-    await tester.pumpWidget(const VordApp(hasSeenOnboarding: false));
+    await tester.pumpWidget(const VordApp(
+      hasSeenOnboarding: false,
+      animateBackground: false,
+    ));
 
     // Tap SKIP
     await tester.tap(find.text('SKIP'));
@@ -65,7 +74,11 @@ void main() {
   });
 
   testWidgets('Mode selector switches between Focus and Break', (WidgetTester tester) async {
-    await tester.pumpWidget(const VordApp(hasSeenOnboarding: true));
+    SharedPreferences.setMockInitialValues({'has_seen_onboarding': true});
+    await tester.pumpWidget(const VordApp(
+      hasSeenOnboarding: true,
+      animateBackground: false,
+    ));
 
     // Tap Short Break
     await tester.tap(find.text('Short Break'));
@@ -83,7 +96,11 @@ void main() {
   });
 
   testWidgets('Opening session history bottom sheet', (WidgetTester tester) async {
-    await tester.pumpWidget(const VordApp(hasSeenOnboarding: true));
+    SharedPreferences.setMockInitialValues({'has_seen_onboarding': true});
+    await tester.pumpWidget(const VordApp(
+      hasSeenOnboarding: true,
+      animateBackground: false,
+    ));
 
     // Tap history button
     await tester.tap(find.text('HISTORY'));

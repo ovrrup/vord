@@ -15,11 +15,13 @@ Future<void> main() async {
 class VordApp extends StatefulWidget {
   final bool? initialShowOnboarding;
   final bool hasSeenOnboarding;
+  final bool animateBackground;
 
   const VordApp({
     super.key,
     this.initialShowOnboarding,
     this.hasSeenOnboarding = false,
+    this.animateBackground = true,
   });
 
   @override
@@ -51,7 +53,7 @@ class _VordAppState extends State<VordApp> {
       theme: AppTheme.darkTheme,
       home: _showOnboarding
           ? OnboardingScreen(onComplete: _completeOnboarding)
-          : const TimerScreen(),
+          : TimerScreen(animateBackground: widget.animateBackground),
     );
   }
 }

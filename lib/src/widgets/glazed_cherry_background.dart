@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 
 class GlazedCherryBackground extends StatefulWidget {
   final Widget child;
+  final bool animate;
 
   const GlazedCherryBackground({
     super.key,
     required this.child,
+    this.animate = true,
   });
 
   @override
@@ -23,7 +25,10 @@ class _GlazedCherryBackgroundState extends State<GlazedCherryBackground>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 10),
-    )..repeat(reverse: true);
+    );
+    if (widget.animate) {
+      _controller.repeat(reverse: true);
+    }
   }
 
   @override
