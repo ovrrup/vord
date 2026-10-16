@@ -40,6 +40,9 @@ jobs:
       - name: Analyze code
         run: flutter analyze
 
+      - name: Run widget tests
+        run: flutter test
+
       - name: Compile Release APK
         run: flutter build apk --release
 

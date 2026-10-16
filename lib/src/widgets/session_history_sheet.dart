@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/session_mode.dart';
-import '../models/study_session.dart';
 import '../services/session_service.dart';
 import '../theme/app_theme.dart';
 
