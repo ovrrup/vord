@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/session_mode.dart';
+import '../screens/onboarding_screen.dart';
 import '../services/session_service.dart';
 import '../theme/app_theme.dart';
 
@@ -169,6 +170,34 @@ class SessionHistorySheet extends StatelessWidget {
                 },
               ),
             ),
+          const SizedBox(height: 16),
+          Center(
+            child: TextButton.icon(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => OnboardingScreen(
+                      onComplete: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(
+                Icons.help_outline_rounded,
+                size: 14,
+                color: AppTheme.textSecondary,
+              ),
+              label: Text(
+                'GESTURE GUIDE',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  letterSpacing: 1.5,
+                  fontSize: 11,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

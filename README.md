@@ -29,6 +29,9 @@ Most productivity apps overwhelm you with complex menus, push notifications, and
 
 ## ✦ Features
 
+- **Minimalist Onboarding Flow**:
+  - Interactive 3-step walkthrough introducing philosophy, gestures, and cadence.
+  - Replayable at any time directly via the history drawer.
 - **Gesture-First Timer**:
   - `Single Tap`: Start / Pause / Resume session.
   - `Long Press`: Instant session reset.
@@ -59,6 +62,7 @@ vord/
 │       │   ├── study_session.dart# Session record model
 │       │   └── timer_status.dart # Timer lifecycle states
 │       ├── screens/
+│       │   ├── onboarding_screen.dart # Interactive 3-step intro & gestures
 │       │   └── timer_screen.dart # Interactive study canvas & gestures
 │       ├── services/
 │       │   └── session_service.dart # Local state & daily statistics engine
