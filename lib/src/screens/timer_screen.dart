@@ -2,8 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/session_mode.dart';
 import '../models/timer_status.dart';
+import '../services/session_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/mode_selector.dart';
+import '../widgets/session_history_sheet.dart';
 import '../widgets/timer_ring.dart';
 
 class TimerScreen extends StatefulWidget {
@@ -14,6 +16,7 @@ class TimerScreen extends StatefulWidget {
 }
 
 class _TimerScreenState extends State<TimerScreen> {
+  final SessionService _sessionService = SessionService();
   SessionMode _currentMode = SessionMode.focus;
   late int _totalSeconds;
   late int _remainingSeconds;
@@ -31,6 +34,7 @@ class _TimerScreenState extends State<TimerScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _sessionService.dispose();
     super.dispose();
   }
 
@@ -72,6 +76,8 @@ class _TimerScreenState extends State<TimerScreen> {
         _completedFocusSessions++;
       }
     });
+
+    _sessionService.recordSession(_currentMode.type, _totalSeconds);
   }
 
   void _pauseTimer() {
@@ -162,7 +168,7 @@ class _TimerScreenState extends State<TimerScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Header: App Title & Focus Cycle Dots
+              // Header: App Title & Interactive Focus Stats / Cycle Dots
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -174,22 +180,51 @@ class _TimerScreenState extends State<TimerScreen> {
                     ),
                   ),
 
-                  // Completed sessions in current 4-cycle
-                  Row(
-                    children: List.generate(4, (index) {
-                      final isFilled = index < (_completedFocusSessions % 4);
-                      return Container(
-                        margin: const EdgeInsets.only(left: 6),
-                        width: 5,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isFilled
-                              ? AppTheme.textPrimary
-                              : const Color(0x662E323D),
-                        ),
-                      );
-                    }),
+                  // Tap to view history and daily stats
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => SessionHistorySheet.show(context, _sessionService),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Row(
+                        children: [
+                          ListenableBuilder(
+                            listenable: _sessionService,
+                            builder: (context, _) {
+                              final mins = _sessionService.todayFocusMinutes;
+                              if (mins == 0) return const SizedBox.shrink();
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 10.0),
+                                child: Text(
+                                  '${mins}m',
+                                  style: theme.textTheme.labelLarge?.copyWith(
+                                    fontSize: 12,
+                                    letterSpacing: 0.5,
+                                    color: AppTheme.textSecondary,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          Row(
+                            children: List.generate(4, (index) {
+                              final isFilled = index < (_completedFocusSessions % 4);
+                              return Container(
+                                margin: const EdgeInsets.only(left: 6),
+                                width: 5,
+                                height: 5,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: isFilled
+                                      ? AppTheme.textPrimary
+                                      : const Color(0x662E323D),
+                                ),
+                              );
+                            }),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -239,7 +274,7 @@ class _TimerScreenState extends State<TimerScreen> {
                 ),
               ),
 
-              // Bottom Bar: Status dot and subtle reset button
+              // Bottom Bar: Status dot, history quick tap, and reset button
               SizedBox(
                 height: 48,
                 child: Row(
@@ -267,27 +302,48 @@ class _TimerScreenState extends State<TimerScreen> {
                       ],
                     ),
 
-                    // Reset action when session is active or paused
-                    if (_status != TimerStatus.ready)
-                      TextButton(
-                        onPressed: _resetTimer,
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppTheme.textSecondary,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
+                    Row(
+                      children: [
+                        TextButton(
+                          onPressed: () =>
+                              SessionHistorySheet.show(context, _sessionService),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppTheme.textSecondary,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
+                          ),
+                          child: Text(
+                            'HISTORY',
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              letterSpacing: 1.5,
+                              fontSize: 11,
+                            ),
                           ),
                         ),
-                        child: Text(
-                          'RESET',
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            letterSpacing: 1.5,
-                            fontSize: 11,
+                        if (_status != TimerStatus.ready) ...[
+                          const SizedBox(width: 4),
+                          TextButton(
+                            onPressed: _resetTimer,
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppTheme.textSecondary,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 8,
+                              ),
+                            ),
+                            child: Text(
+                              'RESET',
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                letterSpacing: 1.5,
+                                fontSize: 11,
+                              ),
+                            ),
                           ),
-                        ),
-                      )
-                    else
-                      const SizedBox.shrink(),
+                        ],
+                      ],
+                    ),
                   ],
                 ),
               ),
