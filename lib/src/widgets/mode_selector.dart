@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/session_mode.dart';
-import '../theme/app_theme.dart';
 
 class ModeSelector extends StatelessWidget {
   final SessionMode currentMode;
