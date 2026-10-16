@@ -4,8 +4,9 @@ import '../models/session_mode.dart';
 import '../models/timer_status.dart';
 import '../services/session_service.dart';
 import '../theme/app_theme.dart';
-import '../widgets/dual_rotating_dial.dart';
+import '../widgets/glazed_cherry_background.dart';
 import '../widgets/mode_selector.dart';
+import '../widgets/pomodoro_tomato_timer.dart';
 import '../widgets/session_history_sheet.dart';
 
 class TimerScreen extends StatefulWidget {
@@ -139,7 +140,7 @@ class _TimerScreenState extends State<TimerScreen> {
       case TimerStatus.ready:
         return AppTheme.textSecondary;
       case TimerStatus.running:
-        return _currentMode.accentColor;
+        return const Color(0xFFFF4D6D); // Glazed cherry pink
       case TimerStatus.paused:
         return const Color(0xFFE5A93C); // Warm amber
       case TimerStatus.completed:
@@ -152,187 +153,179 @@ class _TimerScreenState extends State<TimerScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Header: App Title & Interactive Focus Stats / Cycle Dots
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'VORD',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      letterSpacing: 3.0,
-                      fontWeight: FontWeight.w600,
+      backgroundColor: const Color(0xFF070204), // Deep black-cherry
+      body: GlazedCherryBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Header: App Title & Interactive Focus Stats / Cycle Dots
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'VORD',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        letterSpacing: 3.0,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFFFFF0F3),
+                      ),
                     ),
-                  ),
 
-                  // Tap to view history and daily stats
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => SessionHistorySheet.show(context, _sessionService),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4.0),
-                      child: Row(
-                        children: [
-                          ListenableBuilder(
-                            listenable: _sessionService,
-                            builder: (context, _) {
-                              final mins = _sessionService.todayFocusMinutes;
-                              if (mins == 0) return const SizedBox.shrink();
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 10.0),
-                                child: Text(
-                                  '${mins}m',
-                                  style: theme.textTheme.labelLarge?.copyWith(
-                                    fontSize: 12,
-                                    letterSpacing: 0.5,
-                                    color: AppTheme.textSecondary,
+                    // Tap to view history and daily stats
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => SessionHistorySheet.show(context, _sessionService),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4.0),
+                        child: Row(
+                          children: [
+                            ListenableBuilder(
+                              listenable: _sessionService,
+                              builder: (context, _) {
+                                final mins = _sessionService.todayFocusMinutes;
+                                if (mins == 0) return const SizedBox.shrink();
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 10.0),
+                                  child: Text(
+                                    '${mins}m',
+                                    style: theme.textTheme.labelLarge?.copyWith(
+                                      fontSize: 12,
+                                      letterSpacing: 0.5,
+                                      color: const Color(0xFFFF758F),
+                                    ),
                                   ),
-                                ),
-                              );
-                            },
-                          ),
-                          Row(
-                            children: List.generate(4, (index) {
-                              final isFilled = index < (_completedFocusSessions % 4);
-                              return Container(
-                                margin: const EdgeInsets.only(left: 6),
-                                width: 5,
-                                height: 5,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: isFilled
-                                      ? AppTheme.textPrimary
-                                      : const Color(0x662E323D),
-                                ),
-                              );
-                            }),
-                          ),
-                        ],
+                                );
+                              },
+                            ),
+                            Row(
+                              children: List.generate(4, (index) {
+                                final isFilled = index < (_completedFocusSessions % 4);
+                                return Container(
+                                  margin: const EdgeInsets.only(left: 6),
+                                  width: 5,
+                                  height: 5,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: isFilled
+                                        ? const Color(0xFFFFF0F3)
+                                        : const Color(0x66FF4D6D),
+                                  ),
+                                );
+                              }),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 18),
+
+                // Mode Selector (Focus / Short Break / Long Break)
+                ModeSelector(
+                  currentMode: _currentMode,
+                  onModeChanged: _switchMode,
+                ),
+
+                // Main Interactive Timer Display: Classic Rotating Pomodoro Tomato
+                Expanded(
+                  child: Center(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _handleTap,
+                      onLongPress: _resetTimer,
+                      child: PomodoroTomatoTimer(
+                        remainingSeconds: _remainingSeconds,
+                        totalSeconds: _totalSeconds,
+                        isRunning: _status == TimerStatus.running,
+                        statusLabel: _statusLabel,
                       ),
                     ),
                   ),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // Mode Selector (Focus / Short Break / Long Break)
-              ModeSelector(
-                currentMode: _currentMode,
-                onModeChanged: _switchMode,
-              ),
-
-              // Main Interactive Timer Display: Dual Rotating Dials (Minutes left, Seconds right)
-              Expanded(
-                child: Center(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: _handleTap,
-                    onLongPress: _resetTimer,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        DualRotatingDial(
-                          remainingSeconds: _remainingSeconds,
-                          totalSeconds: _totalSeconds,
-                          accentColor: _currentMode.accentColor,
-                          isRunning: _status == TimerStatus.running,
-                        ),
-                        const SizedBox(height: 32),
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 250),
-                          child: Text(
-                            _statusLabel,
-                            key: ValueKey<String>('$_statusLabel-$_remainingSeconds'),
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
-              ),
 
-              // Bottom Bar: Status dot, history quick tap, and reset button
-              SizedBox(
-                height: 48,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: _statusIndicatorColor,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _status.name.toUpperCase(),
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            letterSpacing: 1.5,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    Row(
-                      children: [
-                        TextButton(
-                          onPressed: () =>
-                              SessionHistorySheet.show(context, _sessionService),
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppTheme.textSecondary,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 8,
+                // Bottom Bar: Status dot, history quick tap, and reset button
+                SizedBox(
+                  height: 48,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: _statusIndicatorColor,
+                              shape: BoxShape.circle,
                             ),
                           ),
-                          child: Text(
-                            'HISTORY',
+                          const SizedBox(width: 8),
+                          Text(
+                            _status.name.toUpperCase(),
                             style: theme.textTheme.labelLarge?.copyWith(
                               letterSpacing: 1.5,
                               fontSize: 11,
+                              color: const Color(0xFFFF758F),
                             ),
                           ),
-                        ),
-                        if (_status != TimerStatus.ready) ...[
-                          const SizedBox(width: 4),
+                        ],
+                      ),
+
+                      Row(
+                        children: [
                           TextButton(
-                            onPressed: _resetTimer,
+                            onPressed: () =>
+                                SessionHistorySheet.show(context, _sessionService),
                             style: TextButton.styleFrom(
-                              foregroundColor: AppTheme.textSecondary,
+                              foregroundColor: const Color(0xFFE2E8F0),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 10,
                                 vertical: 8,
                               ),
                             ),
                             child: Text(
-                              'RESET',
+                              'HISTORY',
                               style: theme.textTheme.labelLarge?.copyWith(
                                 letterSpacing: 1.5,
                                 fontSize: 11,
+                                color: const Color(0xFFE2E8F0),
                               ),
                             ),
                           ),
+                          if (_status != TimerStatus.ready) ...[
+                            const SizedBox(width: 4),
+                            TextButton(
+                              onPressed: _resetTimer,
+                              style: TextButton.styleFrom(
+                                foregroundColor: const Color(0xFFE2E8F0),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 8,
+                                ),
+                              ),
+                              child: Text(
+                                'RESET',
+                                style: theme.textTheme.labelLarge?.copyWith(
+                                  letterSpacing: 1.5,
+                                  fontSize: 11,
+                                  color: const Color(0xFFE2E8F0),
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

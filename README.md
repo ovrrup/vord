@@ -29,13 +29,17 @@ Most productivity apps overwhelm you with complex menus, push notifications, and
 
 ## ✦ Features
 
-- **Minimalist Onboarding Flow**:
+- **Classic Rotating Pomodoro Tomato Timer**:
+  - Mechanical tomato kitchen timer with a rotating top dome that dynamically turns to indicate remaining time.
+  - Stamped 0–55 minute graduations along the rotating split rim, precision reference notch, and organic 5-leaf green stem crown.
+  - Crisp, modern tabular digital readout below the tomato.
+- **Atmospheric Glazed Cherry Red Background**:
+  - Deep obsidian-cherry base with smooth, animated floating nebulae and heavy 75px gaussian blur.
+  - Subtle specular rim glaze for an authentic candy-apple gloss finish.
+- **Minimalist Onboarding Flow (First Launch Only)**:
   - Interactive 3-step walkthrough introducing philosophy, gestures, and cadence.
-  - Replayable at any time directly via the history drawer.
-- **Dual Rotating Mechanical Dial**:
-  - **Left Dial**: Smoothly rotates to represent remaining minutes with precision tick marks.
-  - **Right Dial**: Dynamically sweeps every second with custom rotation easing, representing seconds.
-  - Features central tabular typography, top indicator needles, and pulsing colon separator.
+  - Automatically persisted via `shared_preferences` so it only displays on the first launch.
+  - Replayable on-demand via the history drawer (`GESTURE GUIDE`).
 - **Gesture-First Timer**:
   - `Single Tap`: Start / Pause / Resume session.
   - `Long Press`: Instant session reset.
@@ -73,10 +77,11 @@ vord/
 │       ├── theme/
 │       │   └── app_theme.dart    # Monochromatic palette & typography
 │       └── widgets/
-│           ├── dual_rotating_dial.dart # Dual mechanical rotating dial widget
+│           ├── glazed_cherry_background.dart # Atmospheric blurred red background
 │           ├── mode_selector.dart # Understated pill mode switcher
+│           ├── pomodoro_tomato_timer.dart # Classic mechanical rotating tomato timer
 │           ├── session_history_sheet.dart # Daily metrics timeline drawer
-│           └── timer_ring.dart   # Anti-aliased custom circular progress ring
+│           └── timer_ring.dart   # Anti-aliased circular progress ring
 ├── test/
 │   └── widget_test.dart          # Automated UI & navigation test suite
 └── pubspec.yaml

@@ -7,7 +7,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('First launch shows onboarding flow and completes to timer', (WidgetTester tester) async {
+  testWidgets('First launch shows onboarding flow and completes to tomato timer', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({'has_seen_onboarding': false});
     await tester.pumpWidget(const VordApp(hasSeenOnboarding: false));
 
@@ -27,12 +27,10 @@ void main() {
     expect(find.text('03 / CADENCE'), findsOneWidget);
     expect(find.text('BEGIN'), findsOneWidget);
 
-    // Tap BEGIN to enter timer screen with dual rotating dial
+    // Tap BEGIN to enter timer screen with Pomodoro tomato timer
     await tester.tap(find.text('BEGIN'));
     await tester.pumpAndSettle();
-    expect(find.text('25'), findsOneWidget);
-    expect(find.text('MIN'), findsOneWidget);
-    expect(find.text('SEC'), findsOneWidget);
+    expect(find.text('25:00'), findsOneWidget);
     expect(find.text('HISTORY'), findsOneWidget);
 
     // Verify preference is persisted
@@ -40,16 +38,13 @@ void main() {
     expect(prefs.getBool('has_seen_onboarding'), isTrue);
   });
 
-  testWidgets('Subsequent launch bypasses onboarding directly to TimerScreen', (WidgetTester tester) async {
+  testWidgets('Subsequent launch bypasses onboarding directly to Pomodoro timer', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({'has_seen_onboarding': true});
     await tester.pumpWidget(const VordApp(hasSeenOnboarding: true));
 
     // Verify onboarding is bypassed and timer screen is immediately visible
     expect(find.text('01 / PHILOSOPHY'), findsNothing);
-    expect(find.text('25'), findsOneWidget);
-    expect(find.text('MIN'), findsOneWidget);
-    expect(find.text('00'), findsOneWidget);
-    expect(find.text('SEC'), findsOneWidget);
+    expect(find.text('25:00'), findsOneWidget);
     expect(find.text('HISTORY'), findsOneWidget);
   });
 
@@ -61,10 +56,8 @@ void main() {
     await tester.tap(find.text('SKIP'));
     await tester.pumpAndSettle();
 
-    // Verify immediately on TimerScreen with dual rotating dial
-    expect(find.text('25'), findsOneWidget);
-    expect(find.text('MIN'), findsOneWidget);
-    expect(find.text('SEC'), findsOneWidget);
+    // Verify immediately on TimerScreen with Pomodoro timer
+    expect(find.text('25:00'), findsOneWidget);
 
     // Verify preference is persisted
     final prefs = await SharedPreferences.getInstance();
@@ -78,15 +71,15 @@ void main() {
     await tester.tap(find.text('Short Break'));
     await tester.pumpAndSettle();
 
-    // Verify minutes dial changes to 05
-    expect(find.text('05'), findsOneWidget);
+    // Verify timer changes to 05:00
+    expect(find.text('05:00'), findsOneWidget);
 
     // Tap Long Break
     await tester.tap(find.text('Long Break'));
     await tester.pumpAndSettle();
 
-    // Verify minutes dial changes to 15
-    expect(find.text('15'), findsOneWidget);
+    // Verify timer changes to 15:00
+    expect(find.text('15:00'), findsOneWidget);
   });
 
   testWidgets('Opening session history bottom sheet', (WidgetTester tester) async {
