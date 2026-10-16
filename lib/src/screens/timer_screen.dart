@@ -4,9 +4,9 @@ import '../models/session_mode.dart';
 import '../models/timer_status.dart';
 import '../services/session_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/dual_rotating_dial.dart';
 import '../widgets/mode_selector.dart';
 import '../widgets/session_history_sheet.dart';
-import '../widgets/timer_ring.dart';
 
 class TimerScreen extends StatefulWidget {
   const TimerScreen({super.key});
@@ -119,14 +119,6 @@ class _TimerScreenState extends State<TimerScreen> {
     }
   }
 
-  String _formatTime(int totalSeconds) {
-    final minutes = totalSeconds ~/ 60;
-    final seconds = totalSeconds % 60;
-    final minStr = minutes.toString().padLeft(2, '0');
-    final secStr = seconds.toString().padLeft(2, '0');
-    return '$minStr:$secStr';
-  }
-
   String get _statusLabel {
     switch (_status) {
       case TimerStatus.ready:
@@ -158,7 +150,6 @@ class _TimerScreenState extends State<TimerScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final progress = _totalSeconds > 0 ? _remainingSeconds / _totalSeconds : 0.0;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -237,38 +228,32 @@ class _TimerScreenState extends State<TimerScreen> {
                 onModeChanged: _switchMode,
               ),
 
-              // Main Interactive Timer Display
+              // Main Interactive Timer Display: Dual Rotating Dials (Minutes left, Seconds right)
               Expanded(
                 child: Center(
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: _handleTap,
                     onLongPress: _resetTimer,
-                    child: TimerRing(
-                      progress: progress,
-                      size: 280,
-                      strokeWidth: 2.0,
-                      accentColor: _currentMode.accentColor,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _formatTime(_remainingSeconds),
-                            style: theme.textTheme.displayLarge?.copyWith(
-                              fontFeatures: const [FontFeature.tabularFigures()],
-                            ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        DualRotatingDial(
+                          remainingSeconds: _remainingSeconds,
+                          totalSeconds: _totalSeconds,
+                          accentColor: _currentMode.accentColor,
+                          isRunning: _status == TimerStatus.running,
+                        ),
+                        const SizedBox(height: 32),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 250),
+                          child: Text(
+                            _statusLabel,
+                            key: ValueKey<String>('$_statusLabel-$_remainingSeconds'),
+                            style: theme.textTheme.bodyMedium,
                           ),
-                          const SizedBox(height: 12),
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 250),
-                            child: Text(
-                              _statusLabel,
-                              key: ValueKey<String>('$_statusLabel-$_remainingSeconds'),
-                              style: theme.textTheme.bodyMedium,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

@@ -21,10 +21,12 @@ void main() {
     expect(find.text('03 / CADENCE'), findsOneWidget);
     expect(find.text('BEGIN'), findsOneWidget);
 
-    // Tap BEGIN to enter timer screen
+    // Tap BEGIN to enter timer screen with dual rotating dial
     await tester.tap(find.text('BEGIN'));
     await tester.pumpAndSettle();
-    expect(find.text('25:00'), findsOneWidget);
+    expect(find.text('25'), findsOneWidget);
+    expect(find.text('MIN'), findsOneWidget);
+    expect(find.text('SEC'), findsOneWidget);
     expect(find.text('HISTORY'), findsOneWidget);
   });
 
@@ -35,16 +37,21 @@ void main() {
     await tester.tap(find.text('SKIP'));
     await tester.pumpAndSettle();
 
-    // Verify immediately on TimerScreen
-    expect(find.text('25:00'), findsOneWidget);
+    // Verify immediately on TimerScreen with dual rotating dial
+    expect(find.text('25'), findsOneWidget);
+    expect(find.text('MIN'), findsOneWidget);
+    expect(find.text('SEC'), findsOneWidget);
   });
 
   testWidgets('Timer screen initial state smoke test', (WidgetTester tester) async {
     await tester.pumpWidget(const VordApp(initialShowOnboarding: false));
 
-    // Verify header title and initial timer display exist
+    // Verify header title, dual dials, and controls exist
     expect(find.text('VORD'), findsOneWidget);
-    expect(find.text('25:00'), findsOneWidget);
+    expect(find.text('25'), findsOneWidget);
+    expect(find.text('MIN'), findsOneWidget);
+    expect(find.text('00'), findsOneWidget);
+    expect(find.text('SEC'), findsOneWidget);
     expect(find.text('HISTORY'), findsOneWidget);
   });
 
@@ -55,15 +62,15 @@ void main() {
     await tester.tap(find.text('Short Break'));
     await tester.pumpAndSettle();
 
-    // Verify timer changes to 05:00
-    expect(find.text('05:00'), findsOneWidget);
+    // Verify minutes dial changes to 05
+    expect(find.text('05'), findsOneWidget);
 
     // Tap Long Break
     await tester.tap(find.text('Long Break'));
     await tester.pumpAndSettle();
 
-    // Verify timer changes to 15:00
-    expect(find.text('15:00'), findsOneWidget);
+    // Verify minutes dial changes to 15
+    expect(find.text('15'), findsOneWidget);
   });
 
   testWidgets('Opening session history bottom sheet', (WidgetTester tester) async {

@@ -32,6 +32,10 @@ Most productivity apps overwhelm you with complex menus, push notifications, and
 - **Minimalist Onboarding Flow**:
   - Interactive 3-step walkthrough introducing philosophy, gestures, and cadence.
   - Replayable at any time directly via the history drawer.
+- **Dual Rotating Mechanical Dial**:
+  - **Left Dial**: Smoothly rotates to represent remaining minutes with precision tick marks.
+  - **Right Dial**: Dynamically sweeps every second with custom rotation easing, representing seconds.
+  - Features central tabular typography, top indicator needles, and pulsing colon separator.
 - **Gesture-First Timer**:
   - `Single Tap`: Start / Pause / Resume session.
   - `Long Press`: Instant session reset.
@@ -69,6 +73,7 @@ vord/
 │       ├── theme/
 │       │   └── app_theme.dart    # Monochromatic palette & typography
 │       └── widgets/
+│           ├── dual_rotating_dial.dart # Dual mechanical rotating dial widget
 │           ├── mode_selector.dart # Understated pill mode switcher
 │           ├── session_history_sheet.dart # Daily metrics timeline drawer
 │           └── timer_ring.dart   # Anti-aliased custom circular progress ring
