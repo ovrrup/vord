@@ -1,9 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vord/main.dart';
 
 void main() {
-  testWidgets('Onboarding flow display and completion test', (WidgetTester tester) async {
-    await tester.pumpWidget(const VordApp(initialShowOnboarding: true));
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
+  testWidgets('First launch shows onboarding flow and completes to timer', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({'has_seen_onboarding': false});
+    await tester.pumpWidget(const VordApp(hasSeenOnboarding: false));
 
     // Verify first onboarding slide
     expect(find.text('VORD'), findsOneWidget);
@@ -28,10 +34,28 @@ void main() {
     expect(find.text('MIN'), findsOneWidget);
     expect(find.text('SEC'), findsOneWidget);
     expect(find.text('HISTORY'), findsOneWidget);
+
+    // Verify preference is persisted
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getBool('has_seen_onboarding'), isTrue);
+  });
+
+  testWidgets('Subsequent launch bypasses onboarding directly to TimerScreen', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({'has_seen_onboarding': true});
+    await tester.pumpWidget(const VordApp(hasSeenOnboarding: true));
+
+    // Verify onboarding is bypassed and timer screen is immediately visible
+    expect(find.text('01 / PHILOSOPHY'), findsNothing);
+    expect(find.text('25'), findsOneWidget);
+    expect(find.text('MIN'), findsOneWidget);
+    expect(find.text('00'), findsOneWidget);
+    expect(find.text('SEC'), findsOneWidget);
+    expect(find.text('HISTORY'), findsOneWidget);
   });
 
   testWidgets('Onboarding skip button test', (WidgetTester tester) async {
-    await tester.pumpWidget(const VordApp(initialShowOnboarding: true));
+    SharedPreferences.setMockInitialValues({'has_seen_onboarding': false});
+    await tester.pumpWidget(const VordApp(hasSeenOnboarding: false));
 
     // Tap SKIP
     await tester.tap(find.text('SKIP'));
@@ -41,22 +65,14 @@ void main() {
     expect(find.text('25'), findsOneWidget);
     expect(find.text('MIN'), findsOneWidget);
     expect(find.text('SEC'), findsOneWidget);
-  });
 
-  testWidgets('Timer screen initial state smoke test', (WidgetTester tester) async {
-    await tester.pumpWidget(const VordApp(initialShowOnboarding: false));
-
-    // Verify header title, dual dials, and controls exist
-    expect(find.text('VORD'), findsOneWidget);
-    expect(find.text('25'), findsOneWidget);
-    expect(find.text('MIN'), findsOneWidget);
-    expect(find.text('00'), findsOneWidget);
-    expect(find.text('SEC'), findsOneWidget);
-    expect(find.text('HISTORY'), findsOneWidget);
+    // Verify preference is persisted
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getBool('has_seen_onboarding'), isTrue);
   });
 
   testWidgets('Mode selector switches between Focus and Break', (WidgetTester tester) async {
-    await tester.pumpWidget(const VordApp(initialShowOnboarding: false));
+    await tester.pumpWidget(const VordApp(hasSeenOnboarding: true));
 
     // Tap Short Break
     await tester.tap(find.text('Short Break'));
@@ -74,7 +90,7 @@ void main() {
   });
 
   testWidgets('Opening session history bottom sheet', (WidgetTester tester) async {
-    await tester.pumpWidget(const VordApp(initialShowOnboarding: false));
+    await tester.pumpWidget(const VordApp(hasSeenOnboarding: true));
 
     // Tap history button
     await tester.tap(find.text('HISTORY'));

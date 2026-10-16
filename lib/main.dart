@@ -1,18 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'src/screens/onboarding_screen.dart';
 import 'src/screens/timer_screen.dart';
 import 'src/theme/app_theme.dart';
 
-void main() {
-  runApp(const VordApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+  final hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
+
+  runApp(VordApp(hasSeenOnboarding: hasSeenOnboarding));
 }
 
 class VordApp extends StatefulWidget {
-  final bool initialShowOnboarding;
+  final bool? initialShowOnboarding;
+  final bool hasSeenOnboarding;
 
   const VordApp({
     super.key,
-    this.initialShowOnboarding = true,
+    this.initialShowOnboarding,
+    this.hasSeenOnboarding = false,
   });
 
   @override
@@ -25,13 +32,15 @@ class _VordAppState extends State<VordApp> {
   @override
   void initState() {
     super.initState();
-    _showOnboarding = widget.initialShowOnboarding;
+    _showOnboarding = widget.initialShowOnboarding ?? !widget.hasSeenOnboarding;
   }
 
-  void _completeOnboarding() {
+  Future<void> _completeOnboarding() async {
     setState(() {
       _showOnboarding = false;
     });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('has_seen_onboarding', true);
   }
 
   @override
