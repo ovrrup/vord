@@ -130,15 +130,15 @@ class _TomatoBasePainter extends CustomPainter {
 
     // 2. Tomato base sphere background gradient
     final baseRect = Rect.fromCircle(center: center, radius: radius);
-    final baseGradient = RadialGradient(
-      center: const Alignment(-0.25, -0.2),
+    const baseGradient = RadialGradient(
+      center: Alignment(-0.25, -0.2),
       radius: 0.85,
-      colors: const [
+      colors: [
         Color(0xFFFF2A4D), // Glaze crimson highlight
         Color(0xFFBA181B), // Rich cherry red
         Color(0xFF660708), // Deep shadow edge
       ],
-      stops: const [0.0, 0.55, 1.0],
+      stops: [0.0, 0.55, 1.0],
     );
 
     final bodyPaint = Paint()..shader = baseGradient.createShader(baseRect);

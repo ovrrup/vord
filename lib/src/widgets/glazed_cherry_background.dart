@@ -116,17 +116,17 @@ class _GlazedCherryBackgroundState extends State<GlazedCherryBackground>
             ),
 
             // Subtle glossy specular overlay
-            Positioned.fill(
+            const Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: RadialGradient(
                     center: Alignment.topCenter,
                     radius: 1.2,
-                    colors: const [
+                    colors: [
                       Color(0x18FFFFFF), // Delicate specular rim glaze
                       Colors.transparent,
                     ],
-                    stops: const [0.0, 0.7],
+                    stops: [0.0, 0.7],
                   ),
                 ),
               ),
