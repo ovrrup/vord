@@ -7,7 +7,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('First launch shows onboarding flow and completes to tomato timer', (WidgetTester tester) async {
+  testWidgets('First launch shows onboarding flow and completes to timer screen', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({'has_seen_onboarding': false});
     await tester.pumpWidget(const VordApp(
       hasSeenOnboarding: false,
@@ -30,7 +30,7 @@ void main() {
     expect(find.text('03 / CADENCE'), findsOneWidget);
     expect(find.text('BEGIN'), findsOneWidget);
 
-    // Tap BEGIN to enter timer screen with Pomodoro tomato timer
+    // Tap BEGIN to enter timer screen with simple timer
     await tester.tap(find.text('BEGIN'));
     await tester.pumpAndSettle();
     expect(find.text('25:00'), findsOneWidget);
@@ -41,7 +41,7 @@ void main() {
     expect(prefs.getBool('has_seen_onboarding'), isTrue);
   });
 
-  testWidgets('Subsequent launch bypasses onboarding directly to Pomodoro timer', (WidgetTester tester) async {
+  testWidgets('Subsequent launch bypasses onboarding directly to timer screen', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({'has_seen_onboarding': true});
     await tester.pumpWidget(const VordApp(
       hasSeenOnboarding: true,
@@ -65,7 +65,7 @@ void main() {
     await tester.tap(find.text('SKIP'));
     await tester.pumpAndSettle();
 
-    // Verify immediately on TimerScreen with Pomodoro timer
+    // Verify immediately on TimerScreen with simple timer
     expect(find.text('25:00'), findsOneWidget);
 
     // Verify preference is persisted

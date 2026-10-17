@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../models/session_mode.dart';
 import '../models/timer_status.dart';
@@ -6,8 +7,8 @@ import '../services/session_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glazed_cherry_background.dart';
 import '../widgets/mode_selector.dart';
-import '../widgets/pomodoro_tomato_timer.dart';
 import '../widgets/session_history_sheet.dart';
+import '../widgets/timer_ring.dart';
 
 class TimerScreen extends StatefulWidget {
   final bool animateBackground;
@@ -125,6 +126,12 @@ class _TimerScreenState extends State<TimerScreen> {
     }
   }
 
+  String _formatTime(int totalSeconds) {
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
   String get _statusLabel {
     switch (_status) {
       case TimerStatus.ready:
@@ -237,18 +244,44 @@ class _TimerScreenState extends State<TimerScreen> {
                   onModeChanged: _switchMode,
                 ),
 
-                // Main Interactive Timer Display: Classic Rotating Pomodoro Tomato
+                // Main Interactive Timer Display: Simple Minimal Timer Ring
                 Expanded(
                   child: Center(
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: _handleTap,
                       onLongPress: _resetTimer,
-                      child: PomodoroTomatoTimer(
-                        remainingSeconds: _remainingSeconds,
-                        totalSeconds: _totalSeconds,
-                        isRunning: _status == TimerStatus.running,
-                        statusLabel: _statusLabel,
+                      child: TimerRing(
+                        progress: _totalSeconds > 0
+                            ? _remainingSeconds / _totalSeconds
+                            : 0.0,
+                        accentColor: _statusIndicatorColor,
+                        size: 270,
+                        strokeWidth: 2.5,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _formatTime(_remainingSeconds),
+                              style: theme.textTheme.displayLarge?.copyWith(
+                                color: const Color(0xFFFFF0F3),
+                                letterSpacing: -1.5,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              _statusLabel,
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: const Color(0xFFFFB3C1),
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

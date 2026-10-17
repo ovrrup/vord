@@ -29,10 +29,10 @@ Most productivity apps overwhelm you with complex menus, push notifications, and
 
 ## ✦ Features
 
-- **Classic Rotating Pomodoro Tomato Timer**:
-  - Mechanical tomato kitchen timer with a rotating top dome that dynamically turns to indicate remaining time.
-  - Stamped 0–55 minute graduations along the rotating split rim, precision reference notch, and organic 5-leaf green stem crown.
-  - Crisp, modern tabular digital readout below the tomato.
+- **Minimal Circular Timer Ring**:
+  - Distraction-free, anti-aliased circular progress sweep that gracefully depletes clockwise as the session progresses.
+  - Large tabular digital countdown with jitter-free typography and intuitive session status subtitle.
+  - Interactive gesture controls: tap to start/pause, long-press to reset.
 - **Atmospheric Glazed Cherry Red Background**:
   - Deep obsidian-cherry base with smooth, animated floating nebulae and heavy 75px gaussian blur.
   - Subtle specular rim glaze for an authentic candy-apple gloss finish.
@@ -79,7 +79,6 @@ vord/
 │       └── widgets/
 │           ├── glazed_cherry_background.dart # Atmospheric blurred red background
 │           ├── mode_selector.dart # Understated pill mode switcher
-│           ├── pomodoro_tomato_timer.dart # Classic mechanical rotating tomato timer
 │           ├── session_history_sheet.dart # Daily metrics timeline drawer
 │           └── timer_ring.dart   # Anti-aliased circular progress ring
 ├── test/
