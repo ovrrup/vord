@@ -1,20 +1,18 @@
 import 'dart:math' as math;
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-/// Component 2: A retro tape-recorder styled matte disk with spool holes/cutouts
-/// that mechanically rotates while running.
+/// Component 2: A sharp, retro tape-recorder styled matte disk with mechanical spool cutouts
+/// that rotates while running.
 ///
-/// Time display is hidden while a session is ongoing to immerse the user.
-/// As time passes, progressive colors spread organically from the center outward
+/// Absolutely NO digital time text is displayed on the disk per user specification.
+/// As time passes, progressive colors spread organically from the center hub outward
 /// across 4 stages based on previous session duration and randomized milestones.
 class RetroMatteDisk extends StatefulWidget {
   final int elapsedSeconds;
   final bool isRunning;
   final bool isFocusMode;
   final bool animate;
-  final String formattedTime;
   final int baselineSeconds;
   final int extra3Seconds;
   final int extra4Seconds;
@@ -25,7 +23,6 @@ class RetroMatteDisk extends StatefulWidget {
     required this.isRunning,
     required this.isFocusMode,
     this.animate = true,
-    required this.formattedTime,
     this.baselineSeconds = 1200,
     this.extra3Seconds = 180,
     this.extra4Seconds = 240,
@@ -42,10 +39,10 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
   @override
   void initState() {
     super.initState();
-    // Authentic vintage reel rotation rate (approx 25 seconds per full revolution)
+    // Steady vintage tape reel transport speed (approx 20s per revolution)
     _rotationController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 25),
+      duration: const Duration(seconds: 20),
     );
     if (widget.isRunning && widget.animate) {
       _rotationController.repeat();
@@ -77,53 +74,31 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final diameter = math.min(constraints.maxWidth * 0.90, 310.0);
+        final diameter = math.min(constraints.maxWidth * 0.92, 320.0);
 
         return SizedBox(
           width: diameter,
           height: diameter,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Rotating Tape Recorder Spool with Spreading Colors
-              AnimatedBuilder(
-                animation: _rotationController,
-                builder: (context, _) {
-                  final rotationAngle = widget.animate && widget.isRunning
-                      ? _rotationController.value * 2 * math.pi
-                      : 0.0;
+          child: AnimatedBuilder(
+            animation: _rotationController,
+            builder: (context, _) {
+              final rotationAngle = widget.animate && widget.isRunning
+                  ? _rotationController.value * 2 * math.pi
+                  : 0.0;
 
-                  return CustomPaint(
-                    size: Size(diameter, diameter),
-                    painter: _MatteTapeSpoolPainter(
-                      elapsedSeconds: widget.elapsedSeconds,
-                      rotationAngle: rotationAngle,
-                      isDark: isDark,
-                      isFocusMode: widget.isFocusMode,
-                      baselineSeconds: widget.baselineSeconds,
-                      extra3Seconds: widget.extra3Seconds,
-                      extra4Seconds: widget.extra4Seconds,
-                    ),
-                  );
-                },
-              ),
-
-              // Upright Stopwatch Display in Center: ONLY visible when NOT running
-              // (User requirement: "we dont show them the time while session is ongoing")
-              if (!widget.isRunning)
-                Text(
-                  widget.formattedTime,
-                  style: theme.textTheme.displayLarge?.copyWith(
-                    fontSize: diameter * 0.18,
-                    fontWeight: FontWeight.w400,
-                    letterSpacing: -1.0,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                    color: isDark
-                        ? AppTheme.darkTextPrimary
-                        : AppTheme.lightTextPrimary,
-                  ),
+              return CustomPaint(
+                size: Size(diameter, diameter),
+                painter: _MatteTapeSpoolPainter(
+                  elapsedSeconds: widget.elapsedSeconds,
+                  rotationAngle: rotationAngle,
+                  isDark: isDark,
+                  isFocusMode: widget.isFocusMode,
+                  baselineSeconds: widget.baselineSeconds,
+                  extra3Seconds: widget.extra3Seconds,
+                  extra4Seconds: widget.extra4Seconds,
                 ),
-            ],
+              );
+            },
           ),
         );
       },
@@ -162,55 +137,84 @@ class _MatteTapeSpoolPainter extends CustomPainter {
     final diskPaint = Paint()..shader = diskShader;
     canvas.drawCircle(center, radius - 2, diskPaint);
 
-    // 3. Draw Rotating Tape Recorder Spool Mechanics (Spool Holes, Hub, Drive Splines, Ribs)
+    // 3. Draw Rotating Sharp Tape Recorder Spool Mechanics
     canvas.save();
     canvas.translate(center.dx, center.dy);
     canvas.rotate(rotationAngle);
 
-    _drawTapeSpoolElements(canvas, radius);
+    _drawSharpTapeSpoolElements(canvas, radius);
 
     canvas.restore();
 
     // 4. Draw outer static physical matte casing / bezel
     final outerBezelPaint = Paint()
-      ..color = isDark ? const Color(0xFF2C3136) : const Color(0xFFD0D7DE)
+      ..color = isDark ? const Color(0xFF2C3136) : const Color(0xFFC0C7D0)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5;
     canvas.drawCircle(center, radius - 2, outerBezelPaint);
 
     final innerBezelPaint = Paint()
-      ..color = isDark ? const Color(0x22000000) : const Color(0x10000000)
+      ..color = isDark ? const Color(0x33000000) : const Color(0x18000000)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 4.0;
+      ..strokeWidth = 3.5;
     canvas.drawCircle(center, radius - 5, innerBezelPaint);
+
+    // 5. Tape Path Tension Pins / Guide Rollers (flanking top left and right)
+    _drawTapeGuidePins(canvas, center, radius);
   }
 
-  void _drawTapeSpoolElements(Canvas canvas, double radius) {
-    // A. Concentric reel track grooves
+  void _drawTapeGuidePins(Canvas canvas, Offset center, double radius) {
+    final pinDistance = radius * 0.92;
+    const pinRadius = 6.0;
+
+    final pinFillPaint = Paint()
+      ..color = isDark ? const Color(0xFF22262B) : const Color(0xFFE2E6EA)
+      ..style = PaintingStyle.fill;
+    final pinBorderPaint = Paint()
+      ..color = isDark ? const Color(0xFF3F4752) : const Color(0xFF8B949E)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    final pinCorePaint = Paint()
+      ..color = isDark ? const Color(0xFF0F1114) : const Color(0xFF4A515A)
+      ..style = PaintingStyle.fill;
+
+    // Left and Right guide rollers
+    final leftPin = Offset(center.dx - pinDistance * 0.72, center.dy - pinDistance * 0.70);
+    final rightPin = Offset(center.dx + pinDistance * 0.72, center.dy - pinDistance * 0.70);
+
+    for (final pin in [leftPin, rightPin]) {
+      canvas.drawCircle(pin, pinRadius, pinFillPaint);
+      canvas.drawCircle(pin, pinRadius, pinBorderPaint);
+      canvas.drawCircle(pin, 2.0, pinCorePaint);
+    }
+  }
+
+  void _drawSharpTapeSpoolElements(Canvas canvas, double radius) {
+    // A. Concentric micro-grooves
     final groovePaint = Paint()
-      ..color = isDark ? const Color(0x18FFFFFF) : const Color(0x10000000)
+      ..color = isDark ? const Color(0x22FFFFFF) : const Color(0x14000000)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
-    canvas.drawCircle(Offset.zero, radius * 0.40, groovePaint);
-    canvas.drawCircle(Offset.zero, radius * 0.65, groovePaint);
+    canvas.drawCircle(Offset.zero, radius * 0.38, groovePaint);
+    canvas.drawCircle(Offset.zero, radius * 0.64, groovePaint);
     canvas.drawCircle(Offset.zero, radius * 0.86, groovePaint);
 
-    // B. The 3 Iconic Reel Cutout Spool Windows (Holes at 0°, 120°, 240°)
+    // B. 3 Precision-Cut Tape Reel Cutout Windows (at 0°, 120°, 240°)
     const holeCount = 3;
     final holeDistance = radius * 0.54;
     final holeRadius = radius * 0.18;
 
     final cutoutFillPaint = Paint()
-      ..color = isDark ? const Color(0xFF0C0D0E) : const Color(0xFFE4E8EC)
+      ..color = isDark ? const Color(0xFF0A0B0D) : const Color(0xFFE2E6EA)
       ..style = PaintingStyle.fill;
 
     final cutoutShadowPaint = Paint()
-      ..color = isDark ? const Color(0x44000000) : const Color(0x22000000)
+      ..color = isDark ? const Color(0x55000000) : const Color(0x28000000)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5;
 
     final cutoutBevelPaint = Paint()
-      ..color = isDark ? const Color(0x33FFFFFF) : const Color(0x2B000000)
+      ..color = isDark ? const Color(0x40FFFFFF) : const Color(0x35000000)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2;
 
@@ -221,54 +225,63 @@ class _MatteTapeSpoolPainter extends CustomPainter {
         holeDistance * math.sin(angle),
       );
 
-      // Recessed background behind spool hole
       canvas.drawCircle(holeCenter, holeRadius, cutoutFillPaint);
-      // Inner shadow edge
       canvas.drawCircle(holeCenter, holeRadius - 1.2, cutoutShadowPaint);
-      // Physical machined rim bevel
       canvas.drawCircle(holeCenter, holeRadius, cutoutBevelPaint);
     }
 
-    // C. 3 Structural spoke ribs connecting hub to outer rim (at 60°, 180°, 300°)
+    // C. 3 Structural Spoke Ribs with Hardware Screws (at 60°, 180°, 300°)
     final spokePaint = Paint()
-      ..color = isDark ? const Color(0x33FFFFFF) : const Color(0x28000000)
+      ..color = isDark ? const Color(0x44FFFFFF) : const Color(0x35000000)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6
-      ..strokeCap = StrokeCap.round;
+      ..strokeWidth = 1.8
+      ..strokeCap = StrokeCap.square;
 
-    final rivetFillPaint = Paint()
-      ..color = isDark ? const Color(0xFF282D33) : const Color(0xFFCAD1D9)
+    final screwFill = Paint()
+      ..color = isDark ? const Color(0xFF282D33) : const Color(0xFFC5CBD3)
       ..style = PaintingStyle.fill;
 
-    final rivetStrokePaint = Paint()
-      ..color = isDark ? const Color(0x44FFFFFF) : const Color(0x33000000)
+    final screwBorder = Paint()
+      ..color = isDark ? const Color(0xFF505A66) : const Color(0xFF4A515A)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.8;
 
+    final screwSlot = Paint()
+      ..color = isDark ? const Color(0xFF101214) : const Color(0xFF2A2E33)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
     for (int i = 0; i < 3; i++) {
       final angle = (math.pi / 3) + (i * 2 * math.pi / 3);
-      final p1 = Offset(radius * 0.24 * math.cos(angle), radius * 0.24 * math.sin(angle));
+      final p1 = Offset(radius * 0.25 * math.cos(angle), radius * 0.25 * math.sin(angle));
       final p2 = Offset(radius * 0.86 * math.cos(angle), radius * 0.86 * math.sin(angle));
       canvas.drawLine(p1, p2, spokePaint);
 
-      // Flange hardware rivet / screw along spoke rib
-      final rivetCenter = Offset(radius * 0.33 * math.cos(angle), radius * 0.33 * math.sin(angle));
-      canvas.drawCircle(rivetCenter, 3.2, rivetFillPaint);
-      canvas.drawCircle(rivetCenter, 3.2, rivetStrokePaint);
+      // Chassis machine screw along spoke rib
+      final screwCenter = Offset(radius * 0.33 * math.cos(angle), radius * 0.33 * math.sin(angle));
+      canvas.drawCircle(screwCenter, 3.4, screwFill);
+      canvas.drawCircle(screwCenter, 3.4, screwBorder);
+
+      // Slotted screw head line
+      final slotP1 = Offset(screwCenter.dx - 2.2 * math.cos(angle + math.pi / 2),
+          screwCenter.dy - 2.2 * math.sin(angle + math.pi / 2));
+      final slotP2 = Offset(screwCenter.dx + 2.2 * math.cos(angle + math.pi / 2),
+          screwCenter.dy + 2.2 * math.sin(angle + math.pi / 2));
+      canvas.drawLine(slotP1, slotP2, screwSlot);
     }
 
-    // D. Outer reel rim graduations / strobe tick marks
+    // D. Outer Reel Rim Graduations (60 strobe index ticks)
     final tickPaint = Paint()
-      ..color = isDark ? const Color(0x38FFFFFF) : const Color(0x28000000)
+      ..color = isDark ? const Color(0x40FFFFFF) : const Color(0x30000000)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2
-      ..strokeCap = StrokeCap.round;
+      ..strokeCap = StrokeCap.square;
 
     final majorTickPaint = Paint()
-      ..color = isDark ? const Color(0x75FFFFFF) : const Color(0x55000000)
+      ..color = isDark ? const Color(0x85FFFFFF) : const Color(0x60000000)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.8
-      ..strokeCap = StrokeCap.round;
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.square;
 
     const tickCount = 60;
     for (int i = 0; i < tickCount; i++) {
@@ -282,61 +295,62 @@ class _MatteTapeSpoolPainter extends CustomPainter {
       canvas.drawLine(p1, p2, isMajor ? majorTickPaint : tickPaint);
     }
 
-    // E. Center Spindle Hub & 3-prong drive splines
-    final hubRadius = radius * 0.23;
+    // E. Heavy-Duty Center Spindle Hub & 3-Tooth NAB Splines
+    final hubRadius = radius * 0.24;
     final hubPaint = Paint()
-      ..color = isDark ? const Color(0xFF1D2126) : const Color(0xFFEFF2F5)
+      ..color = isDark ? const Color(0xFF191D22) : const Color(0xFFE8ECF0)
       ..style = PaintingStyle.fill;
     final hubBorderPaint = Paint()
-      ..color = isDark ? const Color(0xFF353C44) : const Color(0xFFB5BDC6)
+      ..color = isDark ? const Color(0xFF38404A) : const Color(0xFFA5ADB8)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
+      ..strokeWidth = 1.8;
 
     canvas.drawCircle(Offset.zero, hubRadius, hubPaint);
     canvas.drawCircle(Offset.zero, hubRadius, hubBorderPaint);
 
-    // 3 drive splines (teeth) radiating from spindle hole into hub
+    // 3 Sharp Rectangular Drive Teeth radiating into hub
     final splinePaint = Paint()
-      ..color = isDark ? const Color(0xFF111315) : const Color(0xFF30363D)
+      ..color = isDark ? const Color(0xFF0F1114) : const Color(0xFF282D33)
       ..style = PaintingStyle.fill;
+    final splineBorder = Paint()
+      ..color = isDark ? const Color(0xFF404854) : const Color(0xFF6E7781)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.8;
 
     for (int i = 0; i < 3; i++) {
       final angle = (math.pi / 3) + (i * 2 * math.pi / 3);
       canvas.save();
       canvas.rotate(angle);
       final rect = Rect.fromCenter(
-        center: Offset(radius * 0.12, 0),
+        center: Offset(radius * 0.125, 0),
         width: radius * 0.08,
         height: radius * 0.038,
       );
-      canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(1.5)), splinePaint);
+      canvas.drawRect(rect, splinePaint);
+      canvas.drawRect(rect, splineBorder);
       canvas.restore();
     }
 
-    // Central spindle axle hole
+    // Central Spindle Axle Hole with metallic collar ring
     final spindleRadius = radius * 0.075;
-    final spindleFillPaint = Paint()
-      ..color = isDark ? const Color(0xFF090A0B) : const Color(0xFF222529)
+    final spindleFill = Paint()
+      ..color = isDark ? const Color(0xFF070809) : const Color(0xFF1E2226)
       ..style = PaintingStyle.fill;
-    final spindleBorderPaint = Paint()
-      ..color = isDark ? const Color(0xFF48515C) : const Color(0xFF8B949E)
+    final spindleBorder = Paint()
+      ..color = isDark ? const Color(0xFF505A66) : const Color(0xFF8B949E)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
+      ..strokeWidth = 1.5;
 
-    canvas.drawCircle(Offset.zero, spindleRadius, spindleFillPaint);
-    canvas.drawCircle(Offset.zero, spindleRadius, spindleBorderPaint);
+    canvas.drawCircle(Offset.zero, spindleRadius, spindleFill);
+    canvas.drawCircle(Offset.zero, spindleRadius, spindleBorder);
   }
 
   Shader _buildRadialDiffusionShader(Offset center, double radius) {
-    // Exact requested color progression stages:
-    // Black theme: #121212 -> #1B2E24 -> #28593D -> #3FA36C
-    // White mode:  #FFFFFF -> #F2F9F3 -> #A8D5BA -> #2E8B57
     final c0 = isDark ? AppTheme.darkStage0 : AppTheme.lightStage0;
     final c1 = isDark ? AppTheme.darkStage1 : AppTheme.lightStage1;
     final c2 = isDark ? AppTheme.darkStage2 : AppTheme.lightStage2;
     final c3 = isDark ? AppTheme.darkStage3 : AppTheme.lightStage3;
 
-    // Neutral baseline for rest mode or 0 seconds
     if (!isFocusMode || elapsedSeconds <= 0) {
       return RadialGradient(
         center: Alignment.center,
@@ -361,12 +375,12 @@ class _MatteTapeSpoolPainter extends CustomPainter {
       colors = [c1, Color.lerp(c1, c0, 0.4)!, c0, c0];
       rawStops = [0.0, (p * 0.5).clamp(0.0, 1.0), p.clamp(0.0, 1.0), 1.0];
     } else if (elapsedSeconds < t2) {
-      // Stage 2: c1 expands outward, c2 starts spreading from center as user nears last session limit
+      // Stage 2: c1 expands outward, c2 starts spreading from center
       final p = ((elapsedSeconds - t1) / (t2 - t1)).clamp(0.0, 1.0);
       colors = [c2, Color.lerp(c2, c1, 0.4)!, c1, c0];
       rawStops = [0.0, (p * 0.5).clamp(0.0, 1.0), (0.5 + p * 0.4).clamp(0.0, 1.0), 1.0];
     } else if (elapsedSeconds < t3) {
-      // Stage 3: Deadline passed! c2 covers outer disk, c3 blooms from center during extra time
+      // Stage 3: Deadline passed! c2 covers outer disk, c3 blooms from center
       final p = ((elapsedSeconds - t2) / (t3 - t2)).clamp(0.0, 1.0);
       colors = [c3, Color.lerp(c3, c2, 0.4)!, c2, c1];
       rawStops = [0.0, (p * 0.5).clamp(0.0, 1.0), (0.5 + p * 0.45).clamp(0.0, 1.0), 1.0];
@@ -381,7 +395,6 @@ class _MatteTapeSpoolPainter extends CustomPainter {
       rawStops = const [0.0, 1.0];
     }
 
-    // Guarantee strictly non-decreasing stops to prevent gradient shader assertion failures
     final stops = <double>[];
     double prev = 0.0;
     for (int i = 0; i < rawStops.length; i++) {

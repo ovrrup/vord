@@ -40,9 +40,8 @@ class MotivationBanner extends StatelessWidget {
       return 'Rest and recharge.';
     }
 
-    final lastMinutes = sessionService.lastFocusDurationMinutes;
     if (sessionService.todayFocusMinutes > 0) {
-      return 'Previous session: ${lastMinutes}m • Compete to beat it by at least 2m.';
+      return 'Compete with yourself. Focus longer than your previous mark.';
     }
     return 'Compete with yourself. Focus longer than before.';
   }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/session_mode.dart';
 import '../services/session_service.dart';
 import '../services/sound_service.dart';
+import '../theme/app_theme.dart';
 import '../widgets/motivation_banner.dart';
 import '../widgets/physical_matte_controls.dart';
 import '../widgets/retro_matte_disk.dart';
@@ -86,7 +87,7 @@ class _TimerScreenState extends State<TimerScreen> {
     _ticker?.cancel();
     _stopwatch.stop();
 
-    // User requirement: "once pause is clicked the session will be saved"
+    // Save session upon pause
     if (_isFocusMode && _elapsedSeconds > 0) {
       _sessionService.recordSession(SessionModeType.focus, _elapsedSeconds);
     } else if (!_isFocusMode && _elapsedSeconds > 0) {
@@ -132,31 +133,65 @@ class _TimerScreenState extends State<TimerScreen> {
       context,
       currentThemeMode: widget.currentThemeMode,
       onThemeChanged: widget.onThemeChanged,
+      sessionService: _sessionService,
     );
   }
 
-  String _formatTime(int totalSeconds) {
-    final hours = totalSeconds ~/ 3600;
-    final minutes = (totalSeconds % 3600) ~/ 60;
-    final seconds = totalSeconds % 60;
-    if (hours > 0) {
-      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-    }
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  Widget _buildChassisScrew(bool isDark) {
+    return Container(
+      width: 10,
+      height: 10,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: isDark ? const Color(0xFF24282E) : const Color(0xFFD6DCE2),
+        border: Border.all(
+          color: isDark ? const Color(0xFF3E4550) : const Color(0xFF9AA4B0),
+          width: 1.0,
+        ),
+      ),
+      child: Center(
+        child: Container(
+          width: 6,
+          height: 1.2,
+          color: isDark ? const Color(0xFF0F1114) : const Color(0xFF5A626E),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 14.0),
           child: Column(
             children: [
-              // 1. Motivational & self-competition greeting banner
+              // Sharp Tape Deck Top Faceplate Header with corner screws
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildChassisScrew(isDark),
+                  Text(
+                    'VORD • MASTER TAPE TRANSPORT',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 2.0,
+                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                    ),
+                  ),
+                  _buildChassisScrew(isDark),
+                ],
+              ),
+
+              const SizedBox(height: 8),
+
+              // 1. Motivation greeting banner (sharp & minimal, zero time display)
               MotivationBanner(
                 sessionService: _sessionService,
                 isFocusMode: _isFocusMode,
@@ -164,7 +199,8 @@ class _TimerScreenState extends State<TimerScreen> {
                 isPaused: _isPaused,
               ),
 
-              // 2. Rotating physical matte disk with center-outward color spread
+              // 2. Sharp tape recorder spool disk with center-outward color spread
+              // (NO digital time on the disk - time is viewed in Category & History under Settings)
               Expanded(
                 child: Center(
                   child: RetroMatteDisk(
@@ -172,7 +208,6 @@ class _TimerScreenState extends State<TimerScreen> {
                     isRunning: _isRunning,
                     isFocusMode: _isFocusMode,
                     animate: widget.animateBackground,
-                    formattedTime: _formatTime(_elapsedSeconds),
                     baselineSeconds: _baselineSeconds,
                     extra3Seconds: _extra3Seconds,
                     extra4Seconds: _extra4Seconds,
@@ -180,8 +215,7 @@ class _TimerScreenState extends State<TimerScreen> {
                 ),
               ),
 
-              // 3. Physical matte controls: Very large play/pause on left,
-              //    Mode switch (1/3rd) + Settings (2/3rd) on right.
+              // 3. Razor-sharp physical tape recorder controls
               BottomControls(
                 isRunning: _isRunning,
                 isPaused: _isPaused,
@@ -189,6 +223,26 @@ class _TimerScreenState extends State<TimerScreen> {
                 onPlayPause: _handlePlayPause,
                 onToggleMode: _toggleMode,
                 onOpenSettings: _openSettings,
+              ),
+
+              const SizedBox(height: 8),
+
+              // Tape Deck Bottom Chassis Screws
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildChassisScrew(isDark),
+                  Text(
+                    'MODEL TC-01 • HIGH BIAS',
+                    style: TextStyle(
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.8,
+                      color: (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary).withAlpha(150),
+                    ),
+                  ),
+                  _buildChassisScrew(isDark),
+                ],
               ),
             ],
           ),

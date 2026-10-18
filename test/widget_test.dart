@@ -10,41 +10,44 @@ void main() {
     SoundService.enableAudio = false; // Disable audio playback during unit/widget tests
   });
 
-  testWidgets('App launches directly to white screen with the 3 components only', (WidgetTester tester) async {
+  testWidgets('App launches to sharp white screen with 3 components and zero digital time on main deck', (WidgetTester tester) async {
     await tester.pumpWidget(const VordApp(
       initialThemeMode: ThemeMode.light,
       animateBackground: false,
     ));
 
-    // Component 1: Motivational & self-competition greeting area
+    // Component 1: Motivational & greeting banner
     expect(find.textContaining('Good '), findsOneWidget);
     expect(find.textContaining('Compete with yourself'), findsOneWidget);
 
-    // Component 2: Retro matte disk with initial 00:00 time
-    expect(find.text('00:00'), findsOneWidget);
+    // Component 2: Retro matte disk with ZERO digital time numbers
+    expect(find.text('00:00'), findsNothing);
 
     // Component 3: Physical matte controls (Play, Mode Switch, Settings)
     expect(find.text('START'), findsOneWidget);
     expect(find.text('FOCUS'), findsOneWidget);
     expect(find.text('SETTINGS'), findsOneWidget);
+
+    // Tape deck faceplate markings
+    expect(find.text('VORD • MASTER TAPE TRANSPORT'), findsOneWidget);
   });
 
-  testWidgets('Play button starts stopwatch, hides time while running, and pause saves session', (WidgetTester tester) async {
+  testWidgets('Play button starts stopwatch and pause saves session; no time shown on main deck', (WidgetTester tester) async {
     await tester.pumpWidget(const VordApp(
       initialThemeMode: ThemeMode.light,
       animateBackground: false,
     ));
 
-    // Initial state: time is visible
+    // Initial state: START button, no time on deck
     expect(find.text('START'), findsOneWidget);
     expect(find.text('PAUSE'), findsNothing);
-    expect(find.text('00:00'), findsOneWidget);
+    expect(find.text('00:00'), findsNothing);
 
-    // Tap large START button
+    // Tap START transport key
     await tester.tap(find.text('START'));
     await tester.pump();
 
-    // Now running: time is hidden per user requirement
+    // Now running
     expect(find.text('PAUSE'), findsOneWidget);
     expect(find.text('START'), findsNothing);
     expect(find.text('00:00'), findsNothing);
@@ -53,9 +56,9 @@ void main() {
     await tester.tap(find.text('PAUSE'));
     await tester.pump();
 
-    // Now paused / ready to resume, time becomes visible again
+    // Now paused / ready to resume; still no digital time on main deck
     expect(find.text('RESUME'), findsOneWidget);
-    expect(find.text('00:00'), findsOneWidget);
+    expect(find.text('00:00'), findsNothing);
   });
 
   testWidgets('Mode switch button switches between Focus and Rest', (WidgetTester tester) async {
@@ -82,7 +85,7 @@ void main() {
     expect(find.text('REST'), findsNothing);
   });
 
-  testWidgets('Settings button opens theme settings with Light, Dark, System options', (WidgetTester tester) async {
+  testWidgets('Settings button opens modal with Category History and Theme options', (WidgetTester tester) async {
     await tester.pumpWidget(const VordApp(
       initialThemeMode: ThemeMode.light,
       animateBackground: false,
@@ -92,7 +95,8 @@ void main() {
     await tester.tap(find.text('SETTINGS'));
     await tester.pumpAndSettle();
 
-    // Verify Theme Settings Modal
+    // Verify Settings Options
+    expect(find.text('SESSION HISTORY & TIME LOGS'), findsOneWidget);
     expect(find.text('THEME SETTING'), findsOneWidget);
     expect(find.text('White Mode (Light)'), findsOneWidget);
     expect(find.text('Black Theme (Dark)'), findsOneWidget);
@@ -106,5 +110,42 @@ void main() {
     expect(find.text('THEME SETTING'), findsNothing);
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('theme_mode'), 'dark');
+  });
+
+  testWidgets('Settings history option navigates to category screen and displays recorded session times', (WidgetTester tester) async {
+    await tester.pumpWidget(const VordApp(
+      initialThemeMode: ThemeMode.light,
+      animateBackground: false,
+    ));
+
+    // Tap START then PAUSE to create a recorded session
+    await tester.tap(find.text('START'));
+    await tester.pump(const Duration(seconds: 2));
+    await tester.tap(find.text('PAUSE'));
+    await tester.pump();
+
+    // Open Settings
+    await tester.tap(find.text('SETTINGS'));
+    await tester.pumpAndSettle();
+
+    // Tap Category & Session History
+    await tester.tap(find.text('SESSION HISTORY & TIME LOGS'));
+    await tester.pumpAndSettle();
+
+    // Verify Category & History Screen
+    expect(find.text('SESSION LOG & HISTORY'), findsOneWidget);
+    expect(find.text('ALL LOGS'), findsOneWidget);
+    expect(find.text('FOCUS SESSIONS'), findsOneWidget);
+    expect(find.text('REST INTERVALS'), findsOneWidget);
+
+    // Verify logged session duration is displayed
+    expect(find.text('FOCUS SESSION'), findsOneWidget);
+
+    // Tap back button
+    await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+    await tester.pumpAndSettle();
+
+    // Back on main screen
+    expect(find.text('VORD • MASTER TAPE TRANSPORT'), findsOneWidget);
   });
 }
