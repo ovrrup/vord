@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'src/screens/onboarding_screen.dart';
 import 'src/screens/timer_screen.dart';
@@ -6,8 +7,26 @@ import 'src/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final prefs = await SharedPreferences.getInstance();
-  final hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
+
+  // Pure black OLED status bar and navigation bar for Android
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.black,
+      systemNavigationBarIconBrightness: Brightness.light,
+      systemNavigationBarDividerColor: Colors.transparent,
+    ),
+  );
+
+  bool hasSeenOnboarding = false;
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
+  } catch (e) {
+    debugPrint('SharedPreferences init fallback: $e');
+  }
 
   runApp(VordApp(hasSeenOnboarding: hasSeenOnboarding));
 }

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // Ultra-clean, distraction-free dark palette
-  static const Color background = Color(0xFF0D0E11);
-  static const Color surface = Color(0xFF16181D);
+  // Ultra-clean, distraction-free pure black OLED palette
+  static const Color background = Color(0xFF000000);
+  static const Color surface = Color(0xFF000000);
   static const Color textPrimary = Color(0xFFEEEEEE);
   static const Color textSecondary = Color(0xFF7A7F8D);
   static const Color accent = Color(0xFFE2E8F0); // Understated, elegant chalk

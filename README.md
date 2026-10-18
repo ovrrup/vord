@@ -22,7 +22,7 @@ Most productivity apps overwhelm you with complex menus, push notifications, and
 
 **VORD** strips away everything unnecessary. It treats your attention as the rarest resource:
 - **Zero Cognitive Load**: Open the app, tap once to focus.
-- **OLED Deep Black**: Designed with true dark values (`#0D0E11`) to preserve battery life and eliminate screen glare during deep work.
+- **OLED Pure Black**: Designed with true pure black (`#000000`) to preserve battery life on OLED screens and eliminate all visual distraction.
 - **Understated Typography**: Tabular, jitter-free figures and subtle accents that inform without distracting.
 
 ---
@@ -33,9 +33,6 @@ Most productivity apps overwhelm you with complex menus, push notifications, and
   - Distraction-free, anti-aliased circular progress sweep that gracefully depletes clockwise as the session progresses.
   - Large tabular digital countdown with jitter-free typography and intuitive session status subtitle.
   - Interactive gesture controls: tap to start/pause, long-press to reset.
-- **Atmospheric Glazed Cherry Red Background**:
-  - Deep obsidian-cherry base with smooth, animated floating nebulae and heavy 75px gaussian blur.
-  - Subtle specular rim glaze for an authentic candy-apple gloss finish.
 - **Minimalist Onboarding Flow (First Launch Only)**:
   - Interactive 3-step walkthrough introducing philosophy, gestures, and cadence.
   - Automatically persisted via `shared_preferences` so it only displays on the first launch.
@@ -77,7 +74,6 @@ vord/
 │       ├── theme/
 │       │   └── app_theme.dart    # Monochromatic palette & typography
 │       └── widgets/
-│           ├── glazed_cherry_background.dart # Atmospheric blurred red background
 │           ├── mode_selector.dart # Understated pill mode switcher
 │           ├── session_history_sheet.dart # Daily metrics timeline drawer
 │           └── timer_ring.dart   # Anti-aliased circular progress ring

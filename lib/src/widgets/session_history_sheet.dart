@@ -47,6 +47,11 @@ class SessionHistorySheet extends StatelessWidget {
       decoration: const BoxDecoration(
         color: AppTheme.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        border: Border(
+          top: BorderSide(color: Color(0x337A7F8D), width: 1),
+          left: BorderSide(color: Color(0x337A7F8D), width: 1),
+          right: BorderSide(color: Color(0x337A7F8D), width: 1),
+        ),
       ),
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
       child: Column(

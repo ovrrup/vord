@@ -16,10 +16,10 @@ class ModeSelector extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: const Color(0x9916181D),
+        color: const Color(0xFF000000),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0x4D2E323D),
+          color: const Color(0x337A7F8D),
           width: 1,
         ),
       ),
