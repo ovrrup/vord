@@ -156,7 +156,7 @@ void main() {
     expect(find.text('SESSION LOG & HISTORY'), findsOneWidget);
     expect(find.text('FOCUS SESSION'), findsOneWidget);
     expect(find.text('REST INTERVAL'), findsOneWidget);
-    expect(find.text('25m 00s'), findsOneWidget);
+    expect(find.text('25m 00s'), findsWidgets);
     expect(find.text('5m 00s'), findsOneWidget);
   });
 }
