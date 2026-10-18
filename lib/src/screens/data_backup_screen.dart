@@ -338,7 +338,7 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'FOCUS LOGGED',
+                                  'FOCUS',
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w700,
@@ -350,10 +350,38 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
                                 Text(
                                   _formatDuration(focusSec),
                                   style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 15,
                                     fontWeight: FontWeight.w800,
                                     letterSpacing: -0.5,
                                     color: isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(width: 1.5, height: 32, color: borderCol),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'REST',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 1.0,
+                                    color: textSecondary,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  _formatDuration(breakSec),
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.5,
+                                    color: textPrimary,
                                   ),
                                 ),
                               ],

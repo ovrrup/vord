@@ -138,9 +138,9 @@ class BottomControls extends StatelessWidget {
     const controlsHeight = 135.0;
     const buttonSpacing = 10.0;
 
-    final availableRightHeight = controlsHeight - buttonSpacing;
-    final modeButtonHeight = availableRightHeight * (1.0 / 3.0);
-    final settingsButtonHeight = availableRightHeight * (2.0 / 3.0);
+    const availableRightHeight = controlsHeight - buttonSpacing;
+    const modeButtonHeight = availableRightHeight * (1.0 / 3.0);
+    const settingsButtonHeight = availableRightHeight * (2.0 / 3.0);
 
     return SizedBox(
       height: controlsHeight,
