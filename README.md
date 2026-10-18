@@ -1,7 +1,7 @@
 # VORD
 
 <p align="center">
-  <strong>An ultra-minimal, distraction-free study session timer built with Flutter.</strong>
+  <strong>A sharp, matte, and retro styled stopwatch designed for self-competition.</strong>
 </p>
 
 <p align="center">
@@ -16,39 +16,24 @@
 
 ---
 
-## ✦ Philosophy
+## ✦ Overview
 
-Most productivity apps overwhelm you with complex menus, push notifications, and visual clutter that break focus before your session even starts.
+**VORD** is an ultra-minimal stopwatch designed to motivate you to compete with yourself and focus longer and longer after each session.
 
-**VORD** strips away everything unnecessary. It treats your attention as the rarest resource:
-- **Zero Cognitive Load**: Open the app, tap once to focus.
-- **OLED Pure Black**: Designed with true pure black (`#000000`) to preserve battery life on OLED screens and eliminate all visual distraction.
-- **Understated Typography**: Tabular, jitter-free figures and subtle accents that inform without distracting.
+When opening the app, you are greeted with a clean, distraction-free white screen containing **3 components only**:
 
----
-
-## ✦ Features
-
-- **Minimal Circular Timer Ring**:
-  - Distraction-free, anti-aliased circular progress sweep that gracefully depletes clockwise as the session progresses.
-  - Large tabular digital countdown with jitter-free typography and intuitive session status subtitle.
-  - Interactive gesture controls: tap to start/pause, long-press to reset.
-- **Minimalist Onboarding Flow (First Launch Only)**:
-  - Interactive 3-step walkthrough introducing philosophy, gestures, and cadence.
-  - Automatically persisted via `shared_preferences` so it only displays on the first launch.
-  - Replayable on-demand via the history drawer (`GESTURE GUIDE`).
-- **Gesture-First Timer**:
-  - `Single Tap`: Start / Pause / Resume session.
-  - `Long Press`: Instant session reset.
-- **Session Modes**:
-  - `Focus` (25m standard study block)
-  - `Short Break` (5m refresh)
-  - `Long Break` (15m recovery)
-- **Automatic Cycle Routing**: Automatically suggests appropriate breaks, guiding you through a classic 4-cycle focus flow.
-- **Session History & Metrics**:
-  - Real-time today's study minutes tracker in the header.
-  - Pull-up timeline sheet displaying completed study blocks and daily focus totals.
-  - 100% offline and private.
+1. **Motivational Greeting Area (Top)**:
+   - Dynamic time-of-day greeting and motivating self-competition benchmarks based on your session history.
+2. **Rotating Physical Matte Disk (Center)**:
+   - A tactile matte disk that rotates when running and progressively paints itself from the center outward as time passes.
+   - **Black Theme**: `#121212` (Off-Black) → `#1B2E24` (Deep Emerald) → `#28593D` (Muted Moss) → `#3FA36C` (Vibrant Leaf Green).
+   - **White Mode**: `#FFFFFF` (Pure White) → `#F2F9F3` (Mint Tint) → `#A8D5BA` (Soft Sage) → `#2E8B57` (Pleasant Forest Green).
+   - Upright tabular digital stopwatch readout in the center (`00:00`).
+3. **Physical Matte Controls (Bottom)**:
+   - Mechanical depression styling and physical button click sound and haptic feedback on touch.
+   - **Large Play/Pause/Resume Button**: Very large tactile button on the left (pausing automatically saves the focus session).
+   - **Mode Switch Button**: Located on the top-right at **1/3rd** the height of the play button to toggle between Focus and Rest modes.
+   - **Settings Button**: Located on the bottom-right at **2/3rd** the height of the play button to switch theme settings (`White Mode`, `Black Theme`, `System Default`).
 
 ---
 
@@ -60,25 +45,24 @@ vord/
 │   └── workflows/
 │       └── build.yml             # Cloud APK compilation & analysis workflow
 ├── lib/
-│   ├── main.dart                 # Application entrypoint
+│   ├── main.dart                 # Application entrypoint & ThemeMode management
 │   └── src/
 │       ├── models/
-│       │   ├── session_mode.dart # Focus / Break interval definitions
+│       │   ├── session_mode.dart # Focus / Rest interval definitions
 │       │   ├── study_session.dart# Session record model
-│       │   └── timer_status.dart # Timer lifecycle states
+│       │   └── timer_status.dart # Lifecycle state machine
 │       ├── screens/
-│       │   ├── onboarding_screen.dart # Interactive 3-step intro & gestures
-│       │   └── timer_screen.dart # Interactive study canvas & gestures
+│       │   └── timer_screen.dart # 3-component retro matte stopwatch screen
 │       ├── services/
-│       │   └── session_service.dart # Local state & daily statistics engine
+│       │   └── session_service.dart # Local state & self-competition engine
 │       ├── theme/
-│       │   └── app_theme.dart    # Monochromatic palette & typography
+│       │   └── app_theme.dart    # Sharp matte palettes & exact disk stages
 │       └── widgets/
-│           ├── mode_selector.dart # Understated pill mode switcher
-│           ├── session_history_sheet.dart # Daily metrics timeline drawer
-│           └── timer_ring.dart   # Anti-aliased circular progress ring
+│           ├── motivation_banner.dart      # Component 1: Greeting & competition benchmark
+│           ├── retro_matte_disk.dart       # Component 2: Rotating spreading-color matte disk
+│           └── physical_matte_controls.dart# Component 3: Physical buttons & theme settings
 ├── test/
-│   └── widget_test.dart          # Automated UI & navigation test suite
+│   └── widget_test.dart          # Automated UI & controls test suite
 └── pubspec.yaml
 ```
 
@@ -96,8 +80,6 @@ You can download the compiled Android APK directly from GitHub without needing a
 ---
 
 ## ✦ Local Development
-
-If you wish to run or contribute locally:
 
 ```bash
 # Clone the repository

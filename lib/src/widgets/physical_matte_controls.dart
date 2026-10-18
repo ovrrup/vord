@@ -1,0 +1,477 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../theme/app_theme.dart';
+
+/// Reusable physical matte button that has a mechanical spring depression and
+/// plays a physical click sound + tactile haptic feedback when pressed.
+class PhysicalMatteButton extends StatefulWidget {
+  final VoidCallback onTap;
+  final Widget child;
+  final Color? backgroundColor;
+  final Color? borderColor;
+  final double borderRadius;
+  final EdgeInsetsGeometry padding;
+
+  const PhysicalMatteButton({
+    super.key,
+    required this.onTap,
+    required this.child,
+    this.backgroundColor,
+    this.borderColor,
+    this.borderRadius = 14.0,
+    this.padding = EdgeInsets.zero,
+  });
+
+  @override
+  State<PhysicalMatteButton> createState() => _PhysicalMatteButtonState();
+}
+
+class _PhysicalMatteButtonState extends State<PhysicalMatteButton> {
+  bool _isPressed = false;
+
+  void _handleTapDown(TapDownDetails details) {
+    setState(() => _isPressed = true);
+    SystemSound.play(SystemSoundType.click);
+    HapticFeedback.lightImpact();
+  }
+
+  void _handleTapUp(TapUpDetails details) {
+    setState(() => _isPressed = false);
+    widget.onTap();
+  }
+
+  void _handleTapCancel() {
+    setState(() => _isPressed = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final defaultBg =
+        isDark ? AppTheme.darkButton : AppTheme.lightButton;
+    final defaultBorder =
+        isDark ? AppTheme.darkBorder : AppTheme.lightBorder;
+    final shadowColor = isDark
+        ? const Color(0xFF0A0B0C)
+        : const Color(0xFFC4CBD2);
+
+    final bg = widget.backgroundColor ?? defaultBg;
+    final border = widget.borderColor ?? defaultBorder;
+
+    return GestureDetector(
+      onTapDown: _handleTapDown,
+      onTapUp: _handleTapUp,
+      onTapCancel: _handleTapCancel,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 60),
+        margin: EdgeInsets.only(
+          top: _isPressed ? 2.5 : 0.0,
+          bottom: _isPressed ? 0.0 : 2.5,
+        ),
+        padding: widget.padding,
+        decoration: BoxDecoration(
+          color: _isPressed
+              ? (isDark
+                  ? AppTheme.darkButtonPressed
+                  : AppTheme.lightButtonPressed)
+              : bg,
+          borderRadius: BorderRadius.circular(widget.borderRadius),
+          border: Border.all(color: border, width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: shadowColor,
+              offset: Offset(0, _isPressed ? 0.5 : 3.0),
+              blurRadius: 0,
+            ),
+          ],
+        ),
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+/// Component 3: Physical matte controls area at bottom of screen.
+/// - Left: A very very large Play/Pause/Resume button.
+/// - Right: Mode Switch (1/3rd size) on top + Settings (2/3rd size) on bottom.
+class BottomControls extends StatelessWidget {
+  final bool isRunning;
+  final bool isPaused;
+  final bool isFocusMode;
+  final VoidCallback onPlayPause;
+  final VoidCallback onToggleMode;
+  final VoidCallback onOpenSettings;
+
+  const BottomControls({
+    super.key,
+    required this.isRunning,
+    required this.isPaused,
+    required this.isFocusMode,
+    required this.onPlayPause,
+    required this.onToggleMode,
+    required this.onOpenSettings,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    const controlsHeight = 118.0;
+    const buttonSpacing = 8.0;
+
+    // Proportions specified by user: Mode switch is 1/3rd, Settings is 2/3rd
+    final availableRightHeight = controlsHeight - buttonSpacing;
+    final modeButtonHeight = availableRightHeight * (1.0 / 3.0);
+    final settingsButtonHeight = availableRightHeight * (2.0 / 3.0);
+
+    return SizedBox(
+      height: controlsHeight,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 1. Very very large Play / Pause / Resume Button (Left)
+          Expanded(
+            flex: 3,
+            child: PhysicalMatteButton(
+              onTap: onPlayPause,
+              borderRadius: 18.0,
+              backgroundColor: isRunning
+                  ? (isDark
+                      ? const Color(0xFF222018)
+                      : const Color(0xFFFFF9E6))
+                  : (isDark
+                      ? const Color(0xFF1B2E24)
+                      : const Color(0xFFF0FDF4)),
+              borderColor: isRunning
+                  ? (isDark
+                      ? const Color(0xFFB48325)
+                      : const Color(0xFFD4A340))
+                  : (isDark
+                      ? const Color(0xFF28593D)
+                      : const Color(0xFFA8D5BA)),
+              child: Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      isRunning
+                          ? Icons.pause_rounded
+                          : (isPaused
+                              ? Icons.play_arrow_rounded
+                              : Icons.play_arrow_rounded),
+                      size: 34,
+                      color: isDark
+                          ? AppTheme.darkTextPrimary
+                          : AppTheme.lightTextPrimary,
+                    ),
+                    const SizedBox(width: 10),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isRunning
+                              ? 'PAUSE'
+                              : (isPaused ? 'RESUME' : 'START'),
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.5,
+                            color: isDark
+                                ? AppTheme.darkTextPrimary
+                                : AppTheme.lightTextPrimary,
+                          ),
+                        ),
+                        Text(
+                          isRunning
+                              ? (isFocusMode
+                                  ? 'Saves session on pause'
+                                  : 'Rest session active')
+                              : (isFocusMode
+                                  ? 'Deep focus session'
+                                  : 'Rest interval'),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: isDark
+                                ? AppTheme.darkTextSecondary
+                                : AppTheme.lightTextSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(width: buttonSpacing),
+
+          // 2. Right Side Column: Mode Switch (1/3) & Settings (2/3)
+          Expanded(
+            flex: 1,
+            child: Column(
+              children: [
+                // Top: Mode Switch Button (1/3rd size)
+                SizedBox(
+                  height: modeButtonHeight,
+                  width: double.infinity,
+                  child: PhysicalMatteButton(
+                    onTap: onToggleMode,
+                    borderRadius: 12.0,
+                    child: Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            isFocusMode
+                                ? Icons.psychology_outlined
+                                : Icons.coffee_outlined,
+                            size: 14,
+                            color: isDark
+                                ? AppTheme.darkTextPrimary
+                                : AppTheme.lightTextPrimary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            isFocusMode ? 'FOCUS' : 'REST',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.8,
+                              color: isDark
+                                  ? AppTheme.darkTextPrimary
+                                  : AppTheme.lightTextPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: buttonSpacing),
+
+                // Bottom: Settings Button (2/3rd size)
+                SizedBox(
+                  height: settingsButtonHeight,
+                  width: double.infinity,
+                  child: PhysicalMatteButton(
+                    onTap: onOpenSettings,
+                    borderRadius: 14.0,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.tune_rounded,
+                            size: 20,
+                            color: isDark
+                                ? AppTheme.darkTextPrimary
+                                : AppTheme.lightTextPrimary,
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'SETTINGS',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.0,
+                              color: isDark
+                                  ? AppTheme.darkTextPrimary
+                                  : AppTheme.lightTextPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Theme settings modal with Dark, Light, and System choices.
+class ThemeSettingsSheet extends StatelessWidget {
+  final ThemeMode currentThemeMode;
+  final ValueChanged<ThemeMode> onThemeChanged;
+
+  const ThemeSettingsSheet({
+    super.key,
+    required this.currentThemeMode,
+    required this.onThemeChanged,
+  });
+
+  static Future<void> show(
+    BuildContext context, {
+    required ThemeMode currentThemeMode,
+    required ValueChanged<ThemeMode> onThemeChanged,
+  }) {
+    return showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => ThemeSettingsSheet(
+        currentThemeMode: currentThemeMode,
+        onThemeChanged: onThemeChanged,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkBackground : AppTheme.lightBackground,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        border: Border.all(
+          color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Drag handle
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF40464E)
+                    : const Color(0xFFD0D7DE),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+
+          Text(
+            'THEME SETTING',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.5,
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          _buildThemeOption(
+            context,
+            label: 'White Mode (Light)',
+            icon: Icons.light_mode_outlined,
+            mode: ThemeMode.light,
+            isDark: isDark,
+          ),
+          const SizedBox(height: 8),
+          _buildThemeOption(
+            context,
+            label: 'Black Theme (Dark)',
+            icon: Icons.dark_mode_outlined,
+            mode: ThemeMode.dark,
+            isDark: isDark,
+          ),
+          const SizedBox(height: 8),
+          _buildThemeOption(
+            context,
+            label: 'System Default',
+            icon: Icons.brightness_auto_outlined,
+            mode: ThemeMode.system,
+            isDark: isDark,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildThemeOption(
+    BuildContext context, {
+    required String label,
+    required IconData icon,
+    required ThemeMode mode,
+    required bool isDark,
+  }) {
+    final isSelected = currentThemeMode == mode;
+
+    return PhysicalMatteButton(
+      onTap: () {
+        onThemeChanged(mode);
+        Navigator.pop(context);
+      },
+      borderRadius: 12.0,
+      backgroundColor: isSelected
+          ? (isDark
+              ? const Color(0xFF1B2E24)
+              : const Color(0xFFF2F9F3))
+          : (isDark
+              ? AppTheme.darkSurface
+              : AppTheme.lightSurface),
+      borderColor: isSelected
+          ? (isDark
+              ? const Color(0xFF3FA36C)
+              : const Color(0xFF2E8B57))
+          : (isDark
+              ? AppTheme.darkBorder
+              : AppTheme.lightBorder),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 18,
+            color: isSelected
+                ? (isDark
+                    ? const Color(0xFF3FA36C)
+                    : const Color(0xFF2E8B57))
+                : (isDark
+                    ? AppTheme.darkTextPrimary
+                    : AppTheme.lightTextPrimary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected
+                    ? (isDark
+                        ? const Color(0xFF3FA36C)
+                        : const Color(0xFF2E8B57))
+                    : (isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.lightTextPrimary),
+              ),
+            ),
+          ),
+          if (isSelected)
+            Icon(
+              Icons.check_circle_rounded,
+              size: 18,
+              color: isDark
+                  ? const Color(0xFF3FA36C)
+                  : const Color(0xFF2E8B57),
+            ),
+        ],
+      ),
+    );
+  }
+}

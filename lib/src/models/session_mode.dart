@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
 
 enum SessionModeType {
   focus,
@@ -24,26 +23,18 @@ class SessionMode {
     type: SessionModeType.focus,
     label: 'Focus',
     durationSeconds: 25 * 60,
-    accentColor: AppTheme.textPrimary,
+    accentColor: Color(0xFF3FA36C),
   );
 
-  static const SessionMode shortBreak = SessionMode(
+  static const SessionMode rest = SessionMode(
     type: SessionModeType.shortBreak,
-    label: 'Short Break',
+    label: 'Rest',
     durationSeconds: 5 * 60,
-    accentColor: Color(0xFF81E6D9), // Soft muted teal
-  );
-
-  static const SessionMode longBreak = SessionMode(
-    type: SessionModeType.longBreak,
-    label: 'Long Break',
-    durationSeconds: 15 * 60,
-    accentColor: Color(0xFFB794F4), // Gentle muted lavender
+    accentColor: Color(0xFF2E8B57),
   );
 
   static const List<SessionMode> all = [
     focus,
-    shortBreak,
-    longBreak,
+    rest,
   ];
 }

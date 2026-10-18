@@ -1,45 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'src/screens/onboarding_screen.dart';
 import 'src/screens/timer_screen.dart';
 import 'src/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Pure black OLED status bar and navigation bar for Android
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      statusBarBrightness: Brightness.dark,
-      systemNavigationBarColor: Colors.black,
-      systemNavigationBarIconBrightness: Brightness.light,
-      systemNavigationBarDividerColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
 
-  bool hasSeenOnboarding = false;
+  ThemeMode initialThemeMode = ThemeMode.light;
   try {
     final prefs = await SharedPreferences.getInstance();
-    hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
+    final savedMode = prefs.getString('theme_mode');
+    if (savedMode == 'dark') {
+      initialThemeMode = ThemeMode.dark;
+    } else if (savedMode == 'system') {
+      initialThemeMode = ThemeMode.system;
+    } else {
+      initialThemeMode = ThemeMode.light;
+    }
   } catch (e) {
-    debugPrint('SharedPreferences init fallback: $e');
+    debugPrint('SharedPreferences theme load fallback: $e');
   }
 
-  runApp(VordApp(hasSeenOnboarding: hasSeenOnboarding));
+  runApp(VordApp(initialThemeMode: initialThemeMode));
 }
 
 class VordApp extends StatefulWidget {
-  final bool? initialShowOnboarding;
-  final bool hasSeenOnboarding;
+  final ThemeMode initialThemeMode;
   final bool animateBackground;
 
   const VordApp({
     super.key,
-    this.initialShowOnboarding,
-    this.hasSeenOnboarding = false,
+    this.initialThemeMode = ThemeMode.light,
     this.animateBackground = true,
   });
 
@@ -48,31 +49,45 @@ class VordApp extends StatefulWidget {
 }
 
 class _VordAppState extends State<VordApp> {
-  late bool _showOnboarding;
+  late ThemeMode _themeMode;
 
   @override
   void initState() {
     super.initState();
-    _showOnboarding = widget.initialShowOnboarding ?? !widget.hasSeenOnboarding;
+    _themeMode = widget.initialThemeMode;
   }
 
-  Future<void> _completeOnboarding() async {
+  Future<void> _updateThemeMode(ThemeMode mode) async {
     setState(() {
-      _showOnboarding = false;
+      _themeMode = mode;
     });
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('has_seen_onboarding', true);
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        'theme_mode',
+        mode == ThemeMode.dark
+            ? 'dark'
+            : (mode == ThemeMode.system ? 'system' : 'light'),
+      );
+    } catch (e) {
+      debugPrint('SharedPreferences theme save error: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Vord',
+      title: 'VORD',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
-      home: _showOnboarding
-          ? OnboardingScreen(onComplete: _completeOnboarding)
-          : TimerScreen(animateBackground: widget.animateBackground),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: _themeMode,
+      home: TimerScreen(
+        animateBackground: widget.animateBackground,
+        currentThemeMode: _themeMode,
+        onThemeChanged: _updateThemeMode,
+      ),
     );
   }
 }

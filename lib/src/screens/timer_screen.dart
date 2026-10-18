@@ -1,20 +1,21 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../models/session_mode.dart';
-import '../models/timer_status.dart';
 import '../services/session_service.dart';
-import '../theme/app_theme.dart';
-import '../widgets/mode_selector.dart';
-import '../widgets/session_history_sheet.dart';
-import '../widgets/timer_ring.dart';
+import '../widgets/motivation_banner.dart';
+import '../widgets/physical_matte_controls.dart';
+import '../widgets/retro_matte_disk.dart';
 
 class TimerScreen extends StatefulWidget {
   final bool animateBackground;
+  final ThemeMode currentThemeMode;
+  final ValueChanged<ThemeMode> onThemeChanged;
 
   const TimerScreen({
     super.key,
     this.animateBackground = true,
+    this.currentThemeMode = ThemeMode.light,
+    required this.onThemeChanged,
   });
 
   @override
@@ -23,144 +24,99 @@ class TimerScreen extends StatefulWidget {
 
 class _TimerScreenState extends State<TimerScreen> {
   final SessionService _sessionService = SessionService();
-  SessionMode _currentMode = SessionMode.focus;
-  late int _totalSeconds;
-  late int _remainingSeconds;
-  TimerStatus _status = TimerStatus.ready;
-  Timer? _timer;
-  int _completedFocusSessions = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _totalSeconds = _currentMode.durationSeconds;
-    _remainingSeconds = _totalSeconds;
-  }
+  final Stopwatch _stopwatch = Stopwatch();
+  Timer? _ticker;
+  int _elapsedSeconds = 0;
+  bool _isRunning = false;
+  bool _isPaused = false;
+  bool _isFocusMode = true; // Focus vs Rest mode
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _ticker?.cancel();
+    _stopwatch.stop();
     _sessionService.dispose();
     super.dispose();
   }
 
-  void _switchMode(SessionMode mode) {
-    if (_currentMode.type == mode.type && _status != TimerStatus.completed) {
-      return;
-    }
-    _timer?.cancel();
+  void _startStopwatch() {
+    _ticker?.cancel();
+    _stopwatch.start();
     setState(() {
-      _currentMode = mode;
-      _totalSeconds = mode.durationSeconds;
-      _remainingSeconds = _totalSeconds;
-      _status = TimerStatus.ready;
-    });
-  }
-
-  void _startTimer() {
-    _timer?.cancel();
-    setState(() {
-      _status = TimerStatus.running;
+      _isRunning = true;
+      _isPaused = false;
     });
 
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _ticker = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
         timer.cancel();
         return;
       }
-      if (_remainingSeconds > 0) {
-        setState(() {
-          _remainingSeconds--;
-        });
-      } else {
-        _timer?.cancel();
-        _handleSessionComplete();
-      }
+      setState(() {
+        _elapsedSeconds = _stopwatch.elapsed.inSeconds;
+      });
     });
   }
 
-  void _handleSessionComplete() {
-    setState(() {
-      _status = TimerStatus.completed;
-      if (_currentMode.type == SessionModeType.focus) {
-        _completedFocusSessions++;
-      }
-    });
+  void _pauseStopwatch() {
+    _ticker?.cancel();
+    _stopwatch.stop();
 
-    _sessionService.recordSession(_currentMode.type, _totalSeconds);
-  }
-
-  void _pauseTimer() {
-    _timer?.cancel();
-    setState(() {
-      _status = TimerStatus.paused;
-    });
-  }
-
-  void _resetTimer() {
-    _timer?.cancel();
-    setState(() {
-      _remainingSeconds = _totalSeconds;
-      _status = TimerStatus.ready;
-    });
-  }
-
-  void _handleTap() {
-    switch (_status) {
-      case TimerStatus.ready:
-      case TimerStatus.paused:
-        _startTimer();
-        break;
-      case TimerStatus.running:
-        _pauseTimer();
-        break;
-      case TimerStatus.completed:
-        // Automatically switch to recommended next mode on tap
-        if (_currentMode.type == SessionModeType.focus) {
-          if (_completedFocusSessions % 4 == 0) {
-            _switchMode(SessionMode.longBreak);
-          } else {
-            _switchMode(SessionMode.shortBreak);
-          }
-        } else {
-          _switchMode(SessionMode.focus);
-        }
-        break;
+    // User requirement: "once pause is clicked the session will be saved"
+    if (_isFocusMode && _elapsedSeconds > 0) {
+      _sessionService.recordSession(SessionModeType.focus, _elapsedSeconds);
+    } else if (!_isFocusMode && _elapsedSeconds > 0) {
+      _sessionService.recordSession(SessionModeType.shortBreak, _elapsedSeconds);
     }
+
+    setState(() {
+      _isRunning = false;
+      _isPaused = true;
+    });
+  }
+
+  void _handlePlayPause() {
+    if (_isRunning) {
+      _pauseStopwatch();
+    } else {
+      _startStopwatch();
+    }
+  }
+
+  void _toggleMode() {
+    // If running or paused, save session and reset
+    if (_isRunning || _isPaused) {
+      if (_isFocusMode && _elapsedSeconds > 0) {
+        _sessionService.recordSession(SessionModeType.focus, _elapsedSeconds);
+      }
+      _ticker?.cancel();
+      _stopwatch.reset();
+    }
+
+    setState(() {
+      _isFocusMode = !_isFocusMode;
+      _elapsedSeconds = 0;
+      _isRunning = false;
+      _isPaused = false;
+    });
+  }
+
+  void _openSettings() {
+    ThemeSettingsSheet.show(
+      context,
+      currentThemeMode: widget.currentThemeMode,
+      onThemeChanged: widget.onThemeChanged,
+    );
   }
 
   String _formatTime(int totalSeconds) {
-    final minutes = totalSeconds ~/ 60;
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
     final seconds = totalSeconds % 60;
+    if (hours > 0) {
+      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    }
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-  }
-
-  String get _statusLabel {
-    switch (_status) {
-      case TimerStatus.ready:
-        return 'Tap to begin ${_currentMode.label.toLowerCase()}';
-      case TimerStatus.running:
-        return '${_currentMode.label} • Tap to pause';
-      case TimerStatus.paused:
-        return 'Paused • Tap to resume';
-      case TimerStatus.completed:
-        return _currentMode.type == SessionModeType.focus
-            ? 'Focus finished! Tap for break'
-            : 'Break finished! Tap for focus';
-    }
-  }
-
-  Color get _statusIndicatorColor {
-    switch (_status) {
-      case TimerStatus.ready:
-        return AppTheme.textSecondary;
-      case TimerStatus.running:
-        return _currentMode.accentColor;
-      case TimerStatus.paused:
-        return const Color(0xFFE5A93C); // Warm amber
-      case TimerStatus.completed:
-        return const Color(0xFF68D391); // Soft calm green
-    }
   }
 
   @override
@@ -168,201 +124,40 @@ class _TimerScreenState extends State<TimerScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Header: App Title & Interactive Focus Stats / Cycle Dots
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'VORD',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      letterSpacing: 3.0,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-
-                  // Tap to view history and daily stats
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => SessionHistorySheet.show(context, _sessionService),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4.0),
-                      child: Row(
-                        children: [
-                          ListenableBuilder(
-                            listenable: _sessionService,
-                            builder: (context, _) {
-                              final mins = _sessionService.todayFocusMinutes;
-                              if (mins == 0) return const SizedBox.shrink();
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 10.0),
-                                child: Text(
-                                  '${mins}m',
-                                  style: theme.textTheme.labelLarge?.copyWith(
-                                    fontSize: 12,
-                                    letterSpacing: 0.5,
-                                    color: AppTheme.textSecondary,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                          Row(
-                            children: List.generate(4, (index) {
-                              final isFilled = index < (_completedFocusSessions % 4);
-                              return Container(
-                                margin: const EdgeInsets.only(left: 6),
-                                width: 5,
-                                height: 5,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: isFilled
-                                      ? AppTheme.textPrimary
-                                      : const Color(0x33FFFFFF),
-                                ),
-                              );
-                            }),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+              // 1. Motivational & self-competition greeting banner
+              MotivationBanner(
+                sessionService: _sessionService,
+                isFocusMode: _isFocusMode,
               ),
 
-              const SizedBox(height: 24),
-
-              // Mode Selector (Focus / Short Break / Long Break)
-              ModeSelector(
-                currentMode: _currentMode,
-                onModeChanged: _switchMode,
-              ),
-
-              // Main Interactive Timer Display: Simple Minimal Timer Ring
+              // 2. Rotating physical matte disk with center-outward color spread
               Expanded(
                 child: Center(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: _handleTap,
-                    onLongPress: _resetTimer,
-                    child: TimerRing(
-                      progress: _totalSeconds > 0
-                          ? _remainingSeconds / _totalSeconds
-                          : 0.0,
-                      accentColor: _statusIndicatorColor,
-                      size: 270,
-                      strokeWidth: 2.5,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _formatTime(_remainingSeconds),
-                            style: theme.textTheme.displayLarge?.copyWith(
-                              color: AppTheme.textPrimary,
-                              letterSpacing: -1.5,
-                              fontFeatures: const [
-                                FontFeature.tabularFigures(),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            _statusLabel,
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.textSecondary,
-                              letterSpacing: 0.2,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  child: RetroMatteDisk(
+                    elapsedSeconds: _elapsedSeconds,
+                    isRunning: _isRunning,
+                    isFocusMode: _isFocusMode,
+                    animate: widget.animateBackground,
+                    formattedTime: _formatTime(_elapsedSeconds),
                   ),
                 ),
               ),
 
-              // Bottom Bar: Status dot, history quick tap, and reset button
-              SizedBox(
-                height: 48,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: _statusIndicatorColor,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _status.name.toUpperCase(),
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            letterSpacing: 1.5,
-                            fontSize: 11,
-                            color: AppTheme.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    Row(
-                      children: [
-                        TextButton(
-                          onPressed: () =>
-                              SessionHistorySheet.show(context, _sessionService),
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppTheme.textSecondary,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 8,
-                            ),
-                          ),
-                          child: Text(
-                            'HISTORY',
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              letterSpacing: 1.5,
-                              fontSize: 11,
-                              color: AppTheme.textSecondary,
-                            ),
-                          ),
-                        ),
-                        if (_status != TimerStatus.ready) ...[
-                          const SizedBox(width: 4),
-                          TextButton(
-                            onPressed: _resetTimer,
-                            style: TextButton.styleFrom(
-                              foregroundColor: AppTheme.textSecondary,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 8,
-                              ),
-                            ),
-                            child: Text(
-                              'RESET',
-                              style: theme.textTheme.labelLarge?.copyWith(
-                                letterSpacing: 1.5,
-                                fontSize: 11,
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
+              // 3. Physical matte controls: Very large play/pause on left,
+              //    Mode switch (1/3rd) + Settings (2/3rd) on right.
+              BottomControls(
+                isRunning: _isRunning,
+                isPaused: _isPaused,
+                isFocusMode: _isFocusMode,
+                onPlayPause: _handlePlayPause,
+                onToggleMode: _toggleMode,
+                onOpenSettings: _openSettings,
               ),
             ],
           ),

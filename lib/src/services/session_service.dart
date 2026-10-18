@@ -32,6 +32,21 @@ class SessionService extends ChangeNotifier {
 
   int get todayFocusMinutes => (todayFocusSeconds / 60).round();
 
+  int get todayBestFocusSeconds {
+    final now = DateTime.now();
+    final todayFocusSessions = _sessions.where((s) =>
+        s.modeType == SessionModeType.focus &&
+        s.completedAt.year == now.year &&
+        s.completedAt.month == now.month &&
+        s.completedAt.day == now.day);
+    if (todayFocusSessions.isEmpty) return 0;
+    return todayFocusSessions
+        .map((s) => s.durationSeconds)
+        .reduce((curr, next) => curr > next ? curr : next);
+  }
+
+  int get todayBestFocusMinutes => (todayBestFocusSeconds / 60).round();
+
   int get todayFocusCount {
     final now = DateTime.now();
     return _sessions
