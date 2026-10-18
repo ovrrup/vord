@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/session_mode.dart';
 import '../services/session_service.dart';
+import '../services/sound_service.dart';
 import '../widgets/motivation_banner.dart';
 import '../widgets/physical_matte_controls.dart';
 import '../widgets/retro_matte_disk.dart';
@@ -40,10 +41,17 @@ class _TimerScreenState extends State<TimerScreen> {
   int _extra4Seconds = 240;    // Stage 4 extra time (180-360s)
 
   @override
+  void initState() {
+    super.initState();
+    SoundService.init();
+  }
+
+  @override
   void dispose() {
     _ticker?.cancel();
     _stopwatch.stop();
     _sessionService.dispose();
+    SoundService.dispose();
     super.dispose();
   }
 
@@ -154,9 +162,6 @@ class _TimerScreenState extends State<TimerScreen> {
                 isFocusMode: _isFocusMode,
                 isRunning: _isRunning,
                 isPaused: _isPaused,
-                elapsedSeconds: _elapsedSeconds,
-                baselineSeconds: _baselineSeconds,
-                extra3Seconds: _extra3Seconds,
               ),
 
               // 2. Rotating physical matte disk with center-outward color spread

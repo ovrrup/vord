@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vord/main.dart';
+import 'package:vord/src/services/sound_service.dart';
 
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    SoundService.enableAudio = false; // Disable audio playback during unit/widget tests
   });
 
   testWidgets('App launches directly to white screen with the 3 components only', (WidgetTester tester) async {
@@ -14,17 +16,16 @@ void main() {
       animateBackground: false,
     ));
 
-    // Component 1: Motivational & self-competition greeting banner
+    // Component 1: Motivational & self-competition greeting area
     expect(find.textContaining('Good '), findsOneWidget);
     expect(find.textContaining('Compete with yourself'), findsOneWidget);
 
     // Component 2: Retro matte disk with initial 00:00 time
     expect(find.text('00:00'), findsOneWidget);
-    expect(find.text('FOCUSING'), findsOneWidget);
 
     // Component 3: Physical matte controls (Play, Mode Switch, Settings)
     expect(find.text('START'), findsOneWidget);
-    expect(find.text('FOCUS'), findsWidgets);
+    expect(find.text('FOCUS'), findsOneWidget);
     expect(find.text('SETTINGS'), findsOneWidget);
   });
 
@@ -63,21 +64,22 @@ void main() {
       animateBackground: false,
     ));
 
-    expect(find.text('FOCUSING'), findsOneWidget);
+    expect(find.text('FOCUS'), findsOneWidget);
 
     // Tap Mode Switch button (top right of controls)
-    await tester.tap(find.text('FOCUS').last);
+    await tester.tap(find.text('FOCUS'));
     await tester.pump();
 
     // Now in Rest mode
-    expect(find.text('RESTING'), findsOneWidget);
-    expect(find.text('REST'), findsWidgets);
+    expect(find.text('REST'), findsOneWidget);
+    expect(find.text('FOCUS'), findsNothing);
 
     // Tap again to switch back to Focus mode
-    await tester.tap(find.text('REST').last);
+    await tester.tap(find.text('REST'));
     await tester.pump();
 
-    expect(find.text('FOCUSING'), findsOneWidget);
+    expect(find.text('FOCUS'), findsOneWidget);
+    expect(find.text('REST'), findsNothing);
   });
 
   testWidgets('Settings button opens theme settings with Light, Dark, System options', (WidgetTester tester) async {

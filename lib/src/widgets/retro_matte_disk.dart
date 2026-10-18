@@ -111,50 +111,17 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
               // Upright Stopwatch Display in Center: ONLY visible when NOT running
               // (User requirement: "we dont show them the time while session is ongoing")
               if (!widget.isRunning)
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      widget.formattedTime,
-                      style: theme.textTheme.displayLarge?.copyWith(
-                        fontSize: diameter * 0.17,
-                        fontWeight: FontWeight.w400,
-                        letterSpacing: -1.0,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                        color: isDark
-                            ? AppTheme.darkTextPrimary
-                            : AppTheme.lightTextPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0x33000000)
-                            : const Color(0x1F000000),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: isDark
-                              ? const Color(0x33FFFFFF)
-                              : const Color(0x22000000),
-                          width: 0.8,
-                        ),
-                      ),
-                      child: Text(
-                        widget.isFocusMode ? 'FOCUSING' : 'RESTING',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1.5,
-                          color: isDark
-                              ? AppTheme.darkTextSecondary
-                              : AppTheme.lightTextSecondary,
-                        ),
-                      ),
-                    ),
-                  ],
+                Text(
+                  widget.formattedTime,
+                  style: theme.textTheme.displayLarge?.copyWith(
+                    fontSize: diameter * 0.18,
+                    fontWeight: FontWeight.w400,
+                    letterSpacing: -1.0,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                    color: isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.lightTextPrimary,
+                  ),
                 ),
             ],
           ),

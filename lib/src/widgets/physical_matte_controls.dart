@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../services/sound_service.dart';
 import '../theme/app_theme.dart';
 
-/// Reusable physical matte button that has a mechanical spring depression and
-/// plays a physical click sound + tactile haptic feedback when pressed.
+/// Reusable physical matte button styled as a vintage tape recorder transport key.
+/// Features authentic mechanical chamfers, physical key travel depression,
+/// and plays real mechanical solenoid / switch click audio.
 class PhysicalMatteButton extends StatefulWidget {
   final VoidCallback onTap;
   final Widget child;
@@ -11,6 +12,7 @@ class PhysicalMatteButton extends StatefulWidget {
   final Color? borderColor;
   final double borderRadius;
   final EdgeInsetsGeometry padding;
+  final bool isTransportKey;
 
   const PhysicalMatteButton({
     super.key,
@@ -18,8 +20,9 @@ class PhysicalMatteButton extends StatefulWidget {
     required this.child,
     this.backgroundColor,
     this.borderColor,
-    this.borderRadius = 14.0,
+    this.borderRadius = 8.0,
     this.padding = EdgeInsets.zero,
+    this.isTransportKey = false,
   });
 
   @override
@@ -31,8 +34,11 @@ class _PhysicalMatteButtonState extends State<PhysicalMatteButton> {
 
   void _handleTapDown(TapDownDetails details) {
     setState(() => _isPressed = true);
-    SystemSound.play(SystemSoundType.click);
-    HapticFeedback.lightImpact();
+    if (widget.isTransportKey) {
+      SoundService.playTapeTransportLatch();
+    } else {
+      SoundService.playTapeSwitchClick();
+    }
   }
 
   void _handleTapUp(TapUpDetails details) {
@@ -49,16 +55,12 @@ class _PhysicalMatteButtonState extends State<PhysicalMatteButton> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final defaultBg =
-        isDark ? AppTheme.darkButton : AppTheme.lightButton;
-    final defaultBorder =
-        isDark ? AppTheme.darkBorder : AppTheme.lightBorder;
-    final shadowColor = isDark
-        ? const Color(0xFF0A0B0C)
-        : const Color(0xFFC4CBD2);
+    final defaultBg = isDark ? const Color(0xFF191C20) : const Color(0xFFF2F5F8);
+    final topHighlight = isDark ? const Color(0xFF323840) : const Color(0xFFFFFFFF);
+    final bottomShadow = isDark ? const Color(0xFF0D0E10) : const Color(0xFFBAC2CB);
+    final borderCol = widget.borderColor ?? (isDark ? const Color(0xFF282D33) : const Color(0xFFCBD2DA));
 
     final bg = widget.backgroundColor ?? defaultBg;
-    final border = widget.borderColor ?? defaultBorder;
 
     return GestureDetector(
       onTapDown: _handleTapDown,
@@ -66,26 +68,42 @@ class _PhysicalMatteButtonState extends State<PhysicalMatteButton> {
       onTapCancel: _handleTapCancel,
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 60),
+        duration: const Duration(milliseconds: 50),
         margin: EdgeInsets.only(
-          top: _isPressed ? 2.5 : 0.0,
-          bottom: _isPressed ? 0.0 : 2.5,
+          top: _isPressed ? 3.5 : 0.0,
+          bottom: _isPressed ? 0.0 : 3.5,
         ),
         padding: widget.padding,
         decoration: BoxDecoration(
           color: _isPressed
-              ? (isDark
-                  ? AppTheme.darkButtonPressed
-                  : AppTheme.lightButtonPressed)
+              ? (isDark ? const Color(0xFF141619) : const Color(0xFFE2E7ED))
               : bg,
           borderRadius: BorderRadius.circular(widget.borderRadius),
-          border: Border.all(color: border, width: 1.5),
-          boxShadow: [
-            BoxShadow(
-              color: shadowColor,
-              offset: Offset(0, _isPressed ? 0.5 : 3.0),
-              blurRadius: 0,
+          border: Border(
+            top: BorderSide(
+              color: _isPressed ? borderCol : topHighlight,
+              width: 1.5,
             ),
+            left: BorderSide(
+              color: borderCol,
+              width: 1.5,
+            ),
+            right: BorderSide(
+              color: borderCol,
+              width: 1.5,
+            ),
+            bottom: BorderSide(
+              color: _isPressed ? borderCol : bottomShadow,
+              width: _isPressed ? 1.5 : 3.0,
+            ),
+          ),
+          boxShadow: [
+            if (!_isPressed)
+              BoxShadow(
+                color: isDark ? const Color(0xFF08090A) : const Color(0xFFB0B8C2),
+                offset: const Offset(0, 3.0),
+                blurRadius: 0,
+              ),
           ],
         ),
         child: widget.child,
@@ -94,8 +112,8 @@ class _PhysicalMatteButtonState extends State<PhysicalMatteButton> {
   }
 }
 
-/// Component 3: Physical matte controls area at bottom of screen.
-/// - Left: A very very large Play/Pause/Resume button.
+/// Component 3: Controls styled strictly as vintage tape recorder transport keys.
+/// - Left: Very large Play / Pause / Resume transport key (with solenoid latch sound).
 /// - Right: Mode Switch (1/3rd size) on top + Settings (2/3rd size) on bottom.
 class BottomControls extends StatelessWidget {
   final bool isRunning;
@@ -123,7 +141,6 @@ class BottomControls extends StatelessWidget {
     const controlsHeight = 118.0;
     const buttonSpacing = 8.0;
 
-    // Proportions specified by user: Mode switch is 1/3rd, Settings is 2/3rd
     final availableRightHeight = controlsHeight - buttonSpacing;
     final modeButtonHeight = availableRightHeight * (1.0 / 3.0);
     final settingsButtonHeight = availableRightHeight * (2.0 / 3.0);
@@ -133,117 +150,114 @@ class BottomControls extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 1. Very very large Play / Pause / Resume Button (Left)
+          // 1. Very Large Tape Recorder Transport Key (Left: Play/Pause/Resume)
           Expanded(
             flex: 3,
             child: PhysicalMatteButton(
               onTap: onPlayPause,
-              borderRadius: 18.0,
+              isTransportKey: true,
+              borderRadius: 10.0,
               backgroundColor: isRunning
-                  ? (isDark
-                      ? const Color(0xFF222018)
-                      : const Color(0xFFFFF9E6))
-                  : (isDark
-                      ? const Color(0xFF1B2E24)
-                      : const Color(0xFFF0FDF4)),
+                  ? (isDark ? const Color(0xFF1E2620) : const Color(0xFFEAF5EE))
+                  : (isDark ? const Color(0xFF1C1F24) : const Color(0xFFF4F6F9)),
               borderColor: isRunning
-                  ? (isDark
-                      ? const Color(0xFFB48325)
-                      : const Color(0xFFD4A340))
-                  : (isDark
-                      ? const Color(0xFF28593D)
-                      : const Color(0xFFA8D5BA)),
-              child: Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      isRunning
-                          ? Icons.pause_rounded
-                          : (isPaused
-                              ? Icons.play_arrow_rounded
-                              : Icons.play_arrow_rounded),
-                      size: 34,
-                      color: isDark
-                          ? AppTheme.darkTextPrimary
-                          : AppTheme.lightTextPrimary,
+                  ? (isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57))
+                  : (isDark ? const Color(0xFF2C323A) : const Color(0xFFD0D7DE)),
+              child: Stack(
+                children: [
+                  // Tape Deck Active Transport Tally Lamp (glow strip when running)
+                  if (isRunning)
+                    Positioned(
+                      top: 4,
+                      left: 12,
+                      right: 12,
+                      height: 3,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF3FA36C)
+                              : const Color(0xFF2E8B57),
+                          borderRadius: BorderRadius.circular(1.5),
+                        ),
+                      ),
                     ),
-                    const SizedBox(width: 10),
-                    Column(
+
+                  Center(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Icon(
+                          isRunning
+                              ? Icons.pause_rounded
+                              : (isPaused
+                                  ? Icons.play_arrow_rounded
+                                  : Icons.play_arrow_rounded),
+                          size: 38,
+                          color: isDark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.lightTextPrimary,
+                        ),
+                        const SizedBox(width: 10),
                         Text(
                           isRunning
                               ? 'PAUSE'
                               : (isPaused ? 'RESUME' : 'START'),
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 22,
                             fontWeight: FontWeight.w800,
-                            letterSpacing: 1.5,
+                            letterSpacing: 2.0,
                             color: isDark
                                 ? AppTheme.darkTextPrimary
                                 : AppTheme.lightTextPrimary,
                           ),
                         ),
-                        Text(
-                          isRunning
-                              ? (isFocusMode
-                                  ? 'Saves session on pause'
-                                  : 'Rest session active')
-                              : (isFocusMode
-                                  ? 'Deep focus session'
-                                  : 'Rest interval'),
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: isDark
-                                ? AppTheme.darkTextSecondary
-                                : AppTheme.lightTextSecondary,
-                          ),
-                        ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
 
           const SizedBox(width: buttonSpacing),
 
-          // 2. Right Side Column: Mode Switch (1/3) & Settings (2/3)
+          // 2. Right Side Column: Tape Deck Selector Switches
           Expanded(
             flex: 1,
             child: Column(
               children: [
-                // Top: Mode Switch Button (1/3rd size)
+                // Top: Mode Switch Key (exactly 1/3rd height)
                 SizedBox(
                   height: modeButtonHeight,
                   width: double.infinity,
                   child: PhysicalMatteButton(
                     onTap: onToggleMode,
-                    borderRadius: 12.0,
+                    borderRadius: 8.0,
                     child: Center(
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            isFocusMode
-                                ? Icons.psychology_outlined
-                                : Icons.coffee_outlined,
-                            size: 14,
-                            color: isDark
-                                ? AppTheme.darkTextPrimary
-                                : AppTheme.lightTextPrimary,
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isFocusMode
+                                  ? (isDark
+                                      ? const Color(0xFF3FA36C)
+                                      : const Color(0xFF2E8B57))
+                                  : (isDark
+                                      ? const Color(0xFF8B949E)
+                                      : const Color(0xFF656D76)),
+                            ),
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 6),
                           Text(
                             isFocusMode ? 'FOCUS' : 'REST',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
-                              letterSpacing: 0.8,
+                              letterSpacing: 1.0,
                               color: isDark
                                   ? AppTheme.darkTextPrimary
                                   : AppTheme.lightTextPrimary,
@@ -257,13 +271,13 @@ class BottomControls extends StatelessWidget {
 
                 const SizedBox(height: buttonSpacing),
 
-                // Bottom: Settings Button (2/3rd size)
+                // Bottom: Settings Key (exactly 2/3rd height)
                 SizedBox(
                   height: settingsButtonHeight,
                   width: double.infinity,
                   child: PhysicalMatteButton(
                     onTap: onOpenSettings,
-                    borderRadius: 14.0,
+                    borderRadius: 8.0,
                     child: Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -416,7 +430,7 @@ class ThemeSettingsSheet extends StatelessWidget {
         onThemeChanged(mode);
         Navigator.pop(context);
       },
-      borderRadius: 12.0,
+      borderRadius: 10.0,
       backgroundColor: isSelected
           ? (isDark
               ? const Color(0xFF1B2E24)
