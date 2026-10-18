@@ -58,10 +58,121 @@ class SessionService extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> deleteSession(String id) async {
+    _sessions.removeWhere((s) => s.id == id);
+    await _saveToStorage();
+    notifyListeners();
+  }
+
   Future<void> clearAllSessions() async {
     _sessions.clear();
     await _saveToStorage();
     notifyListeners();
+  }
+
+  int get totalSessionCount => _sessions.length;
+
+  int get allTimeFocusSeconds => _sessions
+      .where((s) => s.modeType == SessionModeType.focus)
+      .fold(0, (sum, s) => sum + s.durationSeconds);
+
+  int get allTimeBreakSeconds => _sessions
+      .where((s) => s.modeType == SessionModeType.shortBreak)
+      .fold(0, (sum, s) => sum + s.durationSeconds);
+
+  int get storageSizeBytes {
+    try {
+      final jsonList = _sessions.map((s) => jsonEncode(s.toJson())).toList();
+      return utf8.encode(jsonList.toString()).length;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  /// Exports all sessions and metadata formatted as a clean, standardized JSON backup archive.
+  String exportBackupJson() {
+    final payload = {
+      'app': 'VORD',
+      'schemaVersion': 1,
+      'exportedAt': DateTime.now().toUtc().toIso8601String(),
+      'totalSessions': _sessions.length,
+      'allTimeFocusSeconds': allTimeFocusSeconds,
+      'allTimeBreakSeconds': allTimeBreakSeconds,
+      'sessions': _sessions.map((s) => s.toJson()).toList(),
+    };
+    return const JsonEncoder.withIndent('  ').convert(payload);
+  }
+
+  /// Imports sessions from a JSON backup archive.
+  /// If [replace] is true, replaces existing sessions; otherwise merges and deduplicates.
+  Future<BackupImportResult> importBackupJson(String jsonString, {bool replace = false}) async {
+    try {
+      final decoded = jsonDecode(jsonString);
+      if (decoded is! Map<String, dynamic>) {
+        return const BackupImportResult(
+          success: false,
+          importedCount: 0,
+          message: 'Invalid format: Expected a JSON backup object.',
+        );
+      }
+
+      final rawSessions = decoded['sessions'];
+      if (rawSessions is! List) {
+        return const BackupImportResult(
+          success: false,
+          importedCount: 0,
+          message: 'Invalid backup: "sessions" list was not found.',
+        );
+      }
+
+      final parsed = <StudySession>[];
+      for (final item in rawSessions) {
+        if (item is Map<String, dynamic>) {
+          try {
+            parsed.add(StudySession.fromJson(item));
+          } catch (_) {}
+        }
+      }
+
+      if (parsed.isEmpty && rawSessions.isNotEmpty) {
+        return const BackupImportResult(
+          success: false,
+          importedCount: 0,
+          message: 'No valid sessions could be decoded from this backup.',
+        );
+      }
+
+      if (replace) {
+        _sessions.clear();
+        _sessions.addAll(parsed);
+      } else {
+        final existingIds = _sessions.map((s) => s.id).toSet();
+        for (final s in parsed) {
+          if (!existingIds.contains(s.id)) {
+            _sessions.add(s);
+            existingIds.add(s.id);
+          }
+        }
+      }
+
+      _sessions.sort((a, b) => a.completedAt.compareTo(b.completedAt));
+      await _saveToStorage();
+      notifyListeners();
+
+      return BackupImportResult(
+        success: true,
+        importedCount: parsed.length,
+        message: replace
+            ? 'Successfully restored ${parsed.length} sessions (data replaced).'
+            : 'Successfully imported ${parsed.length} sessions.',
+      );
+    } catch (e) {
+      return BackupImportResult(
+        success: false,
+        importedCount: 0,
+        message: 'Import failed: ${e.toString()}',
+      );
+    }
   }
 
   int get todayFocusSeconds {
@@ -116,4 +227,17 @@ class SessionService extends ChangeNotifier {
   }
 
   int get lastFocusDurationMinutes => (lastFocusDurationSeconds / 60).round();
+}
+
+/// Result object returned by [SessionService.importBackupJson].
+class BackupImportResult {
+  final bool success;
+  final int importedCount;
+  final String message;
+
+  const BackupImportResult({
+    required this.success,
+    required this.importedCount,
+    required this.message,
+  });
 }

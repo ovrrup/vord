@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/session_mode.dart';
 import '../models/study_session.dart';
+import '../screens/data_backup_screen.dart';
 import '../services/session_service.dart';
 import '../services/sound_service.dart';
 import '../theme/app_theme.dart';
@@ -111,29 +112,55 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     ),
                   ),
                   const SizedBox(width: 14),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'SESSION LOG & HISTORY',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.8,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'SESSION LOG & HISTORY',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.8,
+                            color: textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'TAPE DECK RECORDER ARCHIVE',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 1.2,
+                            color: textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Backup shortcut button in header
+                  SizedBox(
+                    width: 44,
+                    height: 38,
+                    child: PhysicalMatteButton(
+                      onTap: () {
+                        SoundService.playTapeSwitchClick();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => DataBackupScreen(sessionService: widget.sessionService),
+                          ),
+                        ).then((_) => setState(() {}));
+                      },
+                      borderRadius: 0.0,
+                      child: Center(
+                        child: Icon(
+                          Icons.storage_rounded,
+                          size: 19,
                           color: textPrimary,
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'TAPE DECK RECORDER ARCHIVE',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1.2,
-                          color: textSecondary,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),
@@ -329,6 +356,58 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: -0.5,
                                   color: textPrimary,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () async {
+                                  SoundService.playTapeSwitchClick();
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.lightBackground,
+                                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                                      title: Text(
+                                        'DELETE ENTRY?',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 1.0,
+                                          color: textPrimary,
+                                        ),
+                                      ),
+                                      content: Text(
+                                        'Delete this $durationStr ${isFocus ? "focus session" : "rest interval"}?',
+                                        style: TextStyle(fontSize: 12, color: textSecondary),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(ctx, false),
+                                          child: Text('CANCEL', style: TextStyle(color: textSecondary)),
+                                        ),
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(ctx, true),
+                                          child: const Text(
+                                            'DELETE',
+                                            style: TextStyle(color: Color(0xFFE5534B), fontWeight: FontWeight.w800),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  if (confirm == true) {
+                                    SoundService.playTapeTransportLatch();
+                                    await widget.sessionService.deleteSession(session.id);
+                                    setState(() {});
+                                  }
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.all(4.0),
+                                  child: Icon(
+                                    Icons.delete_outline_rounded,
+                                    size: 18,
+                                    color: textSecondary.withAlpha(140),
+                                  ),
                                 ),
                               ),
                             ],

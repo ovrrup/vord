@@ -157,4 +157,64 @@ void main() {
     expect(find.text('25m 00s'), findsWidgets);
     expect(find.text('5m 00s'), findsOneWidget);
   });
+
+  testWidgets('Settings sheet contains Data & Backup and Sound toggles', (WidgetTester tester) async {
+    await tester.pumpWidget(const VordApp(
+      initialThemeMode: ThemeMode.light,
+      animateBackground: false,
+    ));
+
+    // Open Settings
+    await tester.tap(find.text('SETTINGS'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('DATA & BACKUP ARCHIVE'), findsOneWidget);
+    expect(find.text('SOUND & HAPTICS'), findsOneWidget);
+    expect(find.text('SOUND FX'), findsOneWidget);
+    expect(find.text('HAPTICS'), findsOneWidget);
+
+    // Toggle Sound FX
+    await tester.tap(find.text('SOUND FX'));
+    await tester.pump();
+    expect(SoundService.soundEnabled, false);
+
+    // Tap Data & Backup to navigate
+    await tester.tap(find.text('DATA & BACKUP ARCHIVE'));
+    await tester.pumpAndSettle();
+
+    // Verify Data & Backup screen
+    expect(find.text('DATA & BACKUP ARCHIVE'), findsOneWidget);
+    expect(find.text('BACKUP EXPORT'), findsOneWidget);
+    expect(find.text('BACKUP IMPORT & RESTORE'), findsOneWidget);
+    expect(find.text('DATA MAINTENANCE'), findsOneWidget);
+    expect(find.text('COPY BACKUP JSON'), findsOneWidget);
+
+    // Back to main
+    await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.text('START'), findsOneWidget);
+  });
+
+  test('SessionService exports and imports backup archives cleanly', () async {
+    final sessionService = SessionService();
+    sessionService.recordSession(SessionModeType.focus, 1800);
+    sessionService.recordSession(SessionModeType.shortBreak, 300);
+
+    final exportedJson = sessionService.exportBackupJson();
+    expect(exportedJson.contains('VORD'), isTrue);
+    expect(exportedJson.contains('1800'), isTrue);
+    expect(exportedJson.contains('300'), isTrue);
+
+    // Clear and restore
+    await sessionService.clearAllSessions();
+    expect(sessionService.totalSessionCount, 0);
+
+    final result = await sessionService.importBackupJson(exportedJson, replace: true);
+    expect(result.success, isTrue);
+    expect(result.importedCount, 2);
+    expect(sessionService.totalSessionCount, 2);
+    expect(sessionService.allTimeFocusSeconds, 1800);
+    expect(sessionService.allTimeBreakSeconds, 300);
+  });
 }

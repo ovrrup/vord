@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../screens/data_backup_screen.dart';
 import '../screens/history_screen.dart';
 import '../services/session_service.dart';
 import '../services/sound_service.dart';
@@ -301,8 +302,8 @@ class BottomControls extends StatelessWidget {
   }
 }
 
-/// Solid, clean Settings Modal with direct Category & Session History access and Theme controls.
-class ThemeSettingsSheet extends StatelessWidget {
+/// Solid, clean Settings Modal with Category History, Data & Backup, Sound FX, and Theme controls.
+class ThemeSettingsSheet extends StatefulWidget {
   final ThemeMode currentThemeMode;
   final ValueChanged<ThemeMode> onThemeChanged;
   final SessionService sessionService;
@@ -333,6 +334,21 @@ class ThemeSettingsSheet extends StatelessWidget {
   }
 
   @override
+  State<ThemeSettingsSheet> createState() => _ThemeSettingsSheetState();
+}
+
+class _ThemeSettingsSheetState extends State<ThemeSettingsSheet> {
+  late bool _soundEnabled;
+  late bool _hapticEnabled;
+
+  @override
+  void initState() {
+    super.initState();
+    _soundEnabled = SoundService.soundEnabled;
+    _hapticEnabled = SoundService.hapticEnabled;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -343,7 +359,10 @@ class ThemeSettingsSheet extends StatelessWidget {
     final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.88,
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       decoration: BoxDecoration(
         color: bg,
         border: Border.all(
@@ -351,124 +370,316 @@ class ThemeSettingsSheet extends StatelessWidget {
           width: 1.5,
         ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Drag handle
-          Center(
-            child: Container(
-              width: 36,
-              height: 3,
-              color: isDark ? const Color(0xFF404854) : const Color(0xFFC0C7D0),
-            ),
-          ),
-          const SizedBox(height: 18),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 3,
+                  color: isDark ? const Color(0xFF404854) : const Color(0xFFC0C7D0),
+                ),
+              ),
+              const SizedBox(height: 16),
 
-          // CATEGORIES & HISTORY OPTION
-          Text(
-            'DATA & CATEGORIES',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.5,
-              color: textSecondary,
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          PhysicalMatteButton(
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => HistoryScreen(sessionService: sessionService),
-                ),
-              );
-            },
-            borderRadius: 0.0,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.history_rounded,
-                  size: 20,
-                  color: isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'SESSION HISTORY & TIME LOGS',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.0,
-                          color: textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'View recorded focus times & rest intervals',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w400,
-                          color: textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: 20,
+              // 1. DATA & ARCHIVES
+              Text(
+                'DATA & ARCHIVES',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.5,
                   color: textSecondary,
                 ),
-              ],
-            ),
-          ),
+              ),
+              const SizedBox(height: 10),
 
-          const SizedBox(height: 22),
+              // History button
+              PhysicalMatteButton(
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => HistoryScreen(sessionService: widget.sessionService),
+                    ),
+                  );
+                },
+                borderRadius: 0.0,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.history_rounded,
+                      size: 20,
+                      color: isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'SESSION HISTORY & TIME LOGS',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.8,
+                              color: textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'View recorded focus times & rest intervals',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w400,
+                              color: textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 20,
+                      color: textSecondary,
+                    ),
+                  ],
+                ),
+              ),
 
-          // THEME SETTINGS
-          Text(
-            'THEME SETTING',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.5,
-              color: textSecondary,
-            ),
-          ),
-          const SizedBox(height: 10),
+              const SizedBox(height: 8),
 
-          _buildThemeOption(
-            context,
-            label: 'White Mode (Light)',
-            icon: Icons.light_mode_outlined,
-            mode: ThemeMode.light,
-            isDark: isDark,
+              // Data & Backup button
+              PhysicalMatteButton(
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DataBackupScreen(sessionService: widget.sessionService),
+                    ),
+                  );
+                },
+                borderRadius: 0.0,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.storage_rounded,
+                      size: 20,
+                      color: isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'DATA & BACKUP ARCHIVE',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.8,
+                              color: textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'JSON export, backup restore & data management',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w400,
+                              color: textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 20,
+                      color: textSecondary,
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // 2. SOUND & HAPTICS
+              Text(
+                'SOUND & HAPTICS',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.5,
+                  color: textSecondary,
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: PhysicalMatteButton(
+                      onTap: () {
+                        final next = !_soundEnabled;
+                        setState(() => _soundEnabled = next);
+                        SoundService.setSoundEnabled(next);
+                        if (next) {
+                          SoundService.playTapeSwitchClick();
+                        }
+                      },
+                      borderRadius: 0.0,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _soundEnabled ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+                            size: 18,
+                            color: _soundEnabled
+                                ? (isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57))
+                                : textSecondary,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'SOUND FX',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.8,
+                                color: textPrimary,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            _soundEnabled ? 'ON' : 'OFF',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w800,
+                              color: _soundEnabled
+                                  ? (isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57))
+                                  : textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: PhysicalMatteButton(
+                      onTap: () {
+                        final next = !_hapticEnabled;
+                        setState(() => _hapticEnabled = next);
+                        SoundService.setHapticEnabled(next);
+                        if (next) {
+                          SoundService.playTapeSwitchClick();
+                        }
+                      },
+                      borderRadius: 0.0,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _hapticEnabled ? Icons.vibration_rounded : Icons.smartphone_rounded,
+                            size: 18,
+                            color: _hapticEnabled
+                                ? (isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57))
+                                : textSecondary,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'HAPTICS',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.8,
+                                color: textPrimary,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            _hapticEnabled ? 'ON' : 'OFF',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w800,
+                              color: _hapticEnabled
+                                  ? (isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57))
+                                  : textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              // 3. THEME SETTINGS
+              Text(
+                'THEME SETTING',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.5,
+                  color: textSecondary,
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              _buildThemeOption(
+                context,
+                label: 'White Mode (Light)',
+                icon: Icons.light_mode_outlined,
+                mode: ThemeMode.light,
+                isDark: isDark,
+              ),
+              const SizedBox(height: 8),
+              _buildThemeOption(
+                context,
+                label: 'Black Theme (Dark)',
+                icon: Icons.dark_mode_outlined,
+                mode: ThemeMode.dark,
+                isDark: isDark,
+              ),
+              const SizedBox(height: 8),
+              _buildThemeOption(
+                context,
+                label: 'System Default',
+                icon: Icons.brightness_auto_outlined,
+                mode: ThemeMode.system,
+                isDark: isDark,
+              ),
+
+              const SizedBox(height: 18),
+
+              // Deck spec model mark
+              Center(
+                child: Text(
+                  'VORD TC-01 • SOLID MATTE TAPE STOPWATCH',
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.4,
+                    color: textSecondary.withAlpha(160),
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          _buildThemeOption(
-            context,
-            label: 'Black Theme (Dark)',
-            icon: Icons.dark_mode_outlined,
-            mode: ThemeMode.dark,
-            isDark: isDark,
-          ),
-          const SizedBox(height: 8),
-          _buildThemeOption(
-            context,
-            label: 'System Default',
-            icon: Icons.brightness_auto_outlined,
-            mode: ThemeMode.system,
-            isDark: isDark,
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -480,11 +691,11 @@ class ThemeSettingsSheet extends StatelessWidget {
     required ThemeMode mode,
     required bool isDark,
   }) {
-    final isSelected = currentThemeMode == mode;
+    final isSelected = widget.currentThemeMode == mode;
 
     return PhysicalMatteButton(
       onTap: () {
-        onThemeChanged(mode);
+        widget.onThemeChanged(mode);
         Navigator.pop(context);
       },
       borderRadius: 0.0,
@@ -502,7 +713,7 @@ class ThemeSettingsSheet extends StatelessWidget {
           : (isDark
               ? AppTheme.darkBorder
               : AppTheme.lightBorder),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       child: Row(
         children: [
           Icon(

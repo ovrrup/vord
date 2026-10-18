@@ -35,7 +35,7 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
     with SingleTickerProviderStateMixin {
   late final Ticker _ticker;
   double _rotationAngle = 0.0;
-  double _currentSpeed = 0.0; // 0.0 to 1.0
+  double _currentVelocity = 0.0; // -1.0 (rest mode reverse) to +1.0 (focus mode forward)
   Duration _lastElapsed = Duration.zero;
 
   @override
@@ -56,31 +56,47 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
     _lastElapsed = elapsed;
 
     if (!widget.animate) {
-      if (_currentSpeed != 0.0) {
-        setState(() => _currentSpeed = 0.0);
+      if (_currentVelocity != 0.0) {
+        setState(() => _currentVelocity = 0.0);
       }
       return;
     }
 
-    final targetSpeed = widget.isRunning ? 1.0 : 0.0;
-
-    // Physical inertia: motor spin-up acceleration and mechanical braking friction
-    double newSpeed = _currentSpeed;
-    if (newSpeed < targetSpeed) {
-      newSpeed = math.min(targetSpeed, newSpeed + dt * 1.0); // Spin up in ~1.0s
-    } else if (newSpeed > targetSpeed) {
-      newSpeed = math.max(0.0, newSpeed - dt * 1.3); // Spin down in ~0.8s
+    // In Rest Mode, target velocity is -1.0 (opposite counter-clockwise rotation)
+    // In Focus Mode, target velocity is +1.0 (forward clockwise rotation)
+    final double targetVelocity;
+    if (!widget.isRunning) {
+      targetVelocity = 0.0;
+    } else if (widget.isFocusMode) {
+      targetVelocity = 1.0;
+    } else {
+      targetVelocity = -1.0;
     }
 
-    if (newSpeed > 0.0 || newSpeed != _currentSpeed) {
+    // Physical rotational inertia: motor spin-up acceleration and mechanical braking friction
+    double newVelocity = _currentVelocity;
+    if (newVelocity < targetVelocity) {
+      newVelocity = math.min(targetVelocity, newVelocity + dt * 1.1); // Acceleration
+    } else if (newVelocity > targetVelocity) {
+      newVelocity = math.max(targetVelocity, newVelocity - dt * 1.3); // Deceleration / reverse acceleration
+    }
+
+    if (newVelocity != 0.0 || newVelocity != _currentVelocity) {
       // Base rotation rate: 1 revolution every 18 seconds
       const baseAngularVelocity = (2 * math.pi) / 18.0;
       // Analog wow & flutter (subtle organic rotational micro-variance ±1.2%)
       final flutter = 1.0 + 0.012 * math.sin(elapsed.inMilliseconds / 280.0);
 
       setState(() {
-        _currentSpeed = newSpeed;
-        _rotationAngle = (_rotationAngle + dt * baseAngularVelocity * _currentSpeed * flutter) % (2 * math.pi);
+        _currentVelocity = newVelocity;
+        double nextAngle = _rotationAngle + dt * baseAngularVelocity * _currentVelocity * flutter;
+        while (nextAngle < 0) {
+          nextAngle += 2 * math.pi;
+        }
+        while (nextAngle >= 2 * math.pi) {
+          nextAngle -= 2 * math.pi;
+        }
+        _rotationAngle = nextAngle;
       });
     }
   }
