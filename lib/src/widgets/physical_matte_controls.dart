@@ -56,8 +56,6 @@ class _PhysicalMatteButtonState extends State<PhysicalMatteButton> {
     final isDark = theme.brightness == Brightness.dark;
 
     final defaultBg = isDark ? const Color(0xFF191C20) : const Color(0xFFF2F5F8);
-    final topHighlight = isDark ? const Color(0xFF323840) : const Color(0xFFFFFFFF);
-    final bottomShadow = isDark ? const Color(0xFF0D0E10) : const Color(0xFFBAC2CB);
     final borderCol = widget.borderColor ?? (isDark ? const Color(0xFF282D33) : const Color(0xFFCBD2DA));
 
     final bg = widget.backgroundColor ?? defaultBg;
@@ -79,31 +77,16 @@ class _PhysicalMatteButtonState extends State<PhysicalMatteButton> {
               ? (isDark ? const Color(0xFF141619) : const Color(0xFFE2E7ED))
               : bg,
           borderRadius: BorderRadius.circular(widget.borderRadius),
-          border: Border(
-            top: BorderSide(
-              color: _isPressed ? borderCol : topHighlight,
-              width: 1.5,
-            ),
-            left: BorderSide(
-              color: borderCol,
-              width: 1.5,
-            ),
-            right: BorderSide(
-              color: borderCol,
-              width: 1.5,
-            ),
-            bottom: BorderSide(
-              color: _isPressed ? borderCol : bottomShadow,
-              width: _isPressed ? 1.5 : 3.0,
-            ),
+          border: Border.all(
+            color: borderCol,
+            width: 1.5,
           ),
           boxShadow: [
-            if (!_isPressed)
-              BoxShadow(
-                color: isDark ? const Color(0xFF08090A) : const Color(0xFFB0B8C2),
-                offset: const Offset(0, 3.0),
-                blurRadius: 0,
-              ),
+            BoxShadow(
+              color: isDark ? const Color(0xFF08090A) : const Color(0xFFB0B8C2),
+              offset: Offset(0, _isPressed ? 0.5 : 3.5),
+              blurRadius: 0,
+            ),
           ],
         ),
         child: widget.child,
