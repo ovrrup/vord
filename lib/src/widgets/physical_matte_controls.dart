@@ -181,10 +181,8 @@ class BottomControls extends StatelessWidget {
                       children: [
                         Icon(
                           isRunning
-                              ? Icons.pause_rounded
-                              : (isPaused
-                                  ? Icons.play_arrow_rounded
-                                  : Icons.play_arrow_rounded),
+                              ? Icons.stop_rounded
+                              : Icons.play_arrow_rounded,
                           size: 42,
                           color: isDark
                               ? AppTheme.darkTextPrimary
@@ -192,9 +190,7 @@ class BottomControls extends StatelessWidget {
                         ),
                         const SizedBox(width: 12),
                         Text(
-                          isRunning
-                              ? 'PAUSE'
-                              : (isPaused ? 'RESUME' : 'START'),
+                          isRunning ? 'STOP' : 'START',
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.w800,

@@ -1,10 +1,12 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import '../theme/app_theme.dart';
 
-/// Component 2: A big, minimal, solid realistic matte tape-recorder spool disk.
-/// Rotates smoothly while running with zero digital time numbers.
-/// Progressive colors spread organically from the center hub across 4 stages.
+/// Component 2: A big, solid realistic matte tape-recorder spool disk.
+/// Instead of a continuous color spread, concentric rings of that stage's color
+/// appear one after another for clear, highly visible countdowns and milestone indication.
+/// Features authentic mechanical rotational inertia (spin-up acceleration and braking friction).
 class RetroMatteDisk extends StatefulWidget {
   final int elapsedSeconds;
   final bool isRunning;
@@ -31,35 +33,61 @@ class RetroMatteDisk extends StatefulWidget {
 
 class _RetroMatteDiskState extends State<RetroMatteDisk>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _rotationController;
+  late final Ticker _ticker;
+  double _rotationAngle = 0.0;
+  double _currentSpeed = 0.0; // 0.0 to 1.0
+  Duration _lastElapsed = Duration.zero;
 
   @override
   void initState() {
     super.initState();
-    _rotationController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 22),
-    );
-    if (widget.isRunning && widget.animate) {
-      _rotationController.repeat();
+    _ticker = createTicker(_onTick);
+    if (widget.animate) {
+      _ticker.start();
     }
   }
 
-  @override
-  void didUpdateWidget(covariant RetroMatteDisk oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isRunning != oldWidget.isRunning) {
-      if (widget.isRunning && widget.animate) {
-        _rotationController.repeat();
-      } else {
-        _rotationController.stop();
+  void _onTick(Duration elapsed) {
+    if (_lastElapsed == Duration.zero) {
+      _lastElapsed = elapsed;
+      return;
+    }
+    final dt = (elapsed - _lastElapsed).inMicroseconds / 1000000.0;
+    _lastElapsed = elapsed;
+
+    if (!widget.animate) {
+      if (_currentSpeed != 0.0) {
+        setState(() => _currentSpeed = 0.0);
       }
+      return;
+    }
+
+    final targetSpeed = widget.isRunning ? 1.0 : 0.0;
+
+    // Physical inertia: motor spin-up acceleration and mechanical braking friction
+    double newSpeed = _currentSpeed;
+    if (newSpeed < targetSpeed) {
+      newSpeed = math.min(targetSpeed, newSpeed + dt * 1.0); // Spin up in ~1.0s
+    } else if (newSpeed > targetSpeed) {
+      newSpeed = math.max(0.0, newSpeed - dt * 1.3); // Spin down in ~0.8s
+    }
+
+    if (newSpeed > 0.0 || newSpeed != _currentSpeed) {
+      // Base rotation rate: 1 revolution every 18 seconds
+      const baseAngularVelocity = (2 * math.pi) / 18.0;
+      // Analog wow & flutter (subtle organic rotational micro-variance ±1.2%)
+      final flutter = 1.0 + 0.012 * math.sin(elapsed.inMilliseconds / 280.0);
+
+      setState(() {
+        _currentSpeed = newSpeed;
+        _rotationAngle = (_rotationAngle + dt * baseAngularVelocity * _currentSpeed * flutter) % (2 * math.pi);
+      });
     }
   }
 
   @override
   void dispose() {
-    _rotationController.dispose();
+    _ticker.dispose();
     super.dispose();
   }
 
@@ -80,40 +108,31 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             boxShadow: [
-              // Realistic physical ambient occlusion shadow underneath the solid matte disk
+              // Deep, realistic physical drop shadows giving solid 3D elevation
               BoxShadow(
-                color: isDark ? const Color(0x80000000) : const Color(0x22000000),
-                blurRadius: 28,
-                offset: const Offset(0, 14),
+                color: isDark ? const Color(0x80000000) : const Color(0x24000000),
+                blurRadius: 30,
+                offset: const Offset(0, 16),
                 spreadRadius: 2,
               ),
               BoxShadow(
-                color: isDark ? const Color(0x40000000) : const Color(0x10000000),
-                blurRadius: 8,
+                color: isDark ? const Color(0x40000000) : const Color(0x12000000),
+                blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
-          child: AnimatedBuilder(
-            animation: _rotationController,
-            builder: (context, _) {
-              final rotationAngle = widget.animate && widget.isRunning
-                  ? _rotationController.value * 2 * math.pi
-                  : 0.0;
-
-              return CustomPaint(
-                size: Size(diameter, diameter),
-                painter: _SolidMatteDiskPainter(
-                  elapsedSeconds: widget.elapsedSeconds,
-                  rotationAngle: rotationAngle,
-                  isDark: isDark,
-                  isFocusMode: widget.isFocusMode,
-                  baselineSeconds: widget.baselineSeconds,
-                  extra3Seconds: widget.extra3Seconds,
-                  extra4Seconds: widget.extra4Seconds,
-                ),
-              );
-            },
+          child: CustomPaint(
+            size: Size(diameter, diameter),
+            painter: _ConcentricRingsSpoolPainter(
+              elapsedSeconds: widget.elapsedSeconds,
+              rotationAngle: _rotationAngle,
+              isDark: isDark,
+              isFocusMode: widget.isFocusMode,
+              baselineSeconds: widget.baselineSeconds,
+              extra3Seconds: widget.extra3Seconds,
+              extra4Seconds: widget.extra4Seconds,
+            ),
           ),
         );
       },
@@ -121,7 +140,7 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
   }
 }
 
-class _SolidMatteDiskPainter extends CustomPainter {
+class _ConcentricRingsSpoolPainter extends CustomPainter {
   final int elapsedSeconds;
   final double rotationAngle;
   final bool isDark;
@@ -130,7 +149,7 @@ class _SolidMatteDiskPainter extends CustomPainter {
   final int extra3Seconds;
   final int extra4Seconds;
 
-  _SolidMatteDiskPainter({
+  _ConcentricRingsSpoolPainter({
     required this.elapsedSeconds,
     required this.rotationAngle,
     required this.isDark,
@@ -145,12 +164,17 @@ class _SolidMatteDiskPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
 
-    // 1. Draw solid matte disk face with organic 4-stage center-outward spreading colors
-    final diskShader = _buildRadialDiffusionShader(center, radius);
-    final diskPaint = Paint()..shader = diskShader;
+    // 1. Draw Solid Matte Base Disk Face
+    final baseColor = isDark ? const Color(0xFF141619) : const Color(0xFFF2F5F8);
+    final diskPaint = Paint()
+      ..color = baseColor
+      ..style = PaintingStyle.fill;
     canvas.drawCircle(center, radius - 2, diskPaint);
 
-    // 2. Draw rotating tape spool mechanics (3 large spool windows, spoke ribs, hub)
+    // 2. Draw Concentric Rings that appear one after another as countdown/milestones
+    _drawConcentricRings(canvas, center, radius);
+
+    // 3. Draw Rotating Tape Spool Mechanics (Cutout windows, spoke ribs, center hub)
     canvas.save();
     canvas.translate(center.dx, center.dy);
     canvas.rotate(rotationAngle);
@@ -159,47 +183,106 @@ class _SolidMatteDiskPainter extends CustomPainter {
 
     canvas.restore();
 
-    // 3. Solid precision-machined outer rim / casing
+    // 4. Solid Precision-Machined Outer Casing Rim
     final outerRimPaint = Paint()
-      ..color = isDark ? const Color(0xFF2C323A) : const Color(0xFFCBD2DA)
+      ..color = isDark ? const Color(0xFF2C323B) : const Color(0xFFCAD1DA)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5;
     canvas.drawCircle(center, radius - 2, outerRimPaint);
 
-    // Subtle inner bevel shadow for solid recessed depth
+    // Subtle inner bevel shadow for recessed physical depth
     final innerBevelPaint = Paint()
-      ..color = isDark ? const Color(0x30000000) : const Color(0x14000000)
+      ..color = isDark ? const Color(0x35000000) : const Color(0x16000000)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3.5;
     canvas.drawCircle(center, radius - 5, innerBevelPaint);
   }
 
-  void _drawSpoolMechanics(Canvas canvas, double radius) {
-    // A. Subtle concentric matte groove rings
-    final groovePaint = Paint()
-      ..color = isDark ? const Color(0x18FFFFFF) : const Color(0x10000000)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-    canvas.drawCircle(Offset.zero, radius * 0.40, groovePaint);
-    canvas.drawCircle(Offset.zero, radius * 0.65, groovePaint);
-    canvas.drawCircle(Offset.zero, radius * 0.86, groovePaint);
+  void _drawConcentricRings(Canvas canvas, Offset center, double radius) {
+    // 4 concentric annular rings:
+    // Ring 1 (innermost): radius 0.26R to 0.40R
+    // Ring 2 (mid-inner): radius 0.41R to 0.55R
+    // Ring 3 (mid-outer): radius 0.56R to 0.70R
+    // Ring 4 (outermost): radius 0.71R to 0.86R
+    final b = baselineSeconds > 0 ? baselineSeconds : 1200;
+    final t1 = (b * 0.70).round().clamp(60, b - 30);
+    final t2 = b;
+    final t3 = t2 + (extra3Seconds > 0 ? extra3Seconds : 180);
+    final t4 = t3 + (extra4Seconds > 0 ? extra4Seconds : 240);
 
-    // B. The 3 Big, Clean Tape Reel Spool Windows (at 0°, 120°, 240°)
+    // Palette Colors:
+    // Dark: #121212 -> #1B2E24 -> #28593D -> #3FA36C
+    // White: #FFFFFF -> #F2F9F3 -> #A8D5BA -> #2E8B57
+    final cUnlit = isDark ? const Color(0xFF181B1F) : const Color(0xFFE9EDF2);
+    final c1 = isDark ? AppTheme.darkStage1 : const Color(0xFFD6EFE0); // Mint/Emerald
+    final c2 = isDark ? AppTheme.darkStage2 : AppTheme.lightStage2;     // Muted Moss / Sage
+    final c3 = isDark ? AppTheme.darkStage3 : AppTheme.lightStage3;     // Leaf Green / Forest Green
+    final c4 = isDark ? const Color(0xFF4FD18B) : const Color(0xFF1E7B44); // Electric / Deep Green
+
+    final grooveColor = isDark ? const Color(0xFF282E37) : const Color(0xFFCBD2DA);
+
+    // Calculate ring activation states
+    // Ring 1: Active when t > 0
+    final ring1Active = isFocusMode && elapsedSeconds > 0;
+    final p1 = ring1Active ? (elapsedSeconds / t1).clamp(0.0, 1.0) : 0.0;
+
+    // Ring 2: Active when t >= t1
+    final ring2Active = isFocusMode && elapsedSeconds >= t1;
+    final p2 = ring2Active ? ((elapsedSeconds - t1) / (t2 - t1)).clamp(0.0, 1.0) : 0.0;
+
+    // Ring 3: Active when t >= t2 (Previous record surpassed!)
+    final ring3Active = isFocusMode && elapsedSeconds >= t2;
+    final p3 = ring3Active ? ((elapsedSeconds - t2) / (t3 - t2)).clamp(0.0, 1.0) : 0.0;
+
+    // Ring 4: Active when t >= t3 (Extending into new limit!)
+    final ring4Active = isFocusMode && elapsedSeconds >= t3;
+    final p4 = ring4Active ? ((elapsedSeconds - t3) / (t4 - t3)).clamp(0.0, 1.0) : 0.0;
+
+    final ringConfigs = [
+      _RingConfig(0.26 * radius, 0.40 * radius, ring1Active ? Color.lerp(cUnlit, c1, p1)! : cUnlit, ring1Active),
+      _RingConfig(0.41 * radius, 0.55 * radius, ring2Active ? Color.lerp(cUnlit, c2, p2)! : cUnlit, ring2Active),
+      _RingConfig(0.56 * radius, 0.70 * radius, ring3Active ? Color.lerp(cUnlit, c3, p3)! : cUnlit, ring3Active),
+      _RingConfig(0.71 * radius, 0.86 * radius, ring4Active ? Color.lerp(cUnlit, c4, p4)! : cUnlit, ring4Active),
+    ];
+
+    for (final rc in ringConfigs) {
+      final ringThickness = rc.outerR - rc.innerR;
+      final midRadius = (rc.innerR + rc.outerR) / 2;
+
+      // Draw concentric ring band
+      final paint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = ringThickness
+        ..color = rc.color;
+      canvas.drawCircle(center, midRadius, paint);
+
+      // Draw sharp concentric separator groove lines
+      final sepPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..color = grooveColor;
+      canvas.drawCircle(center, rc.innerR, sepPaint);
+      canvas.drawCircle(center, rc.outerR, sepPaint);
+    }
+  }
+
+  void _drawSpoolMechanics(Canvas canvas, double radius) {
+    // 3 Big Clean Tape Reel Spool Windows (at 0°, 120°, 240°)
     const holeCount = 3;
     final holeDistance = radius * 0.54;
     final holeRadius = radius * 0.19;
 
     final cutoutFillPaint = Paint()
-      ..color = isDark ? const Color(0xFF0C0E10) : const Color(0xFFE2E6EB)
+      ..color = isDark ? const Color(0xFF0A0C0E) : const Color(0xFFDEE3E9)
       ..style = PaintingStyle.fill;
 
     final cutoutShadowPaint = Paint()
-      ..color = isDark ? const Color(0x55000000) : const Color(0x28000000)
+      ..color = isDark ? const Color(0x60000000) : const Color(0x30000000)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5;
 
     final cutoutRimPaint = Paint()
-      ..color = isDark ? const Color(0x30FFFFFF) : const Color(0x28000000)
+      ..color = isDark ? const Color(0x40FFFFFF) : const Color(0x30000000)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2;
 
@@ -216,9 +299,9 @@ class _SolidMatteDiskPainter extends CustomPainter {
       canvas.drawCircle(holeCenter, holeRadius, cutoutRimPaint);
     }
 
-    // C. 3 Clean structural spoke ribs (at 60°, 180°, 300°)
+    // 3 Clean structural spoke ribs (at 60°, 180°, 300°)
     final spokePaint = Paint()
-      ..color = isDark ? const Color(0x35FFFFFF) : const Color(0x2B000000)
+      ..color = isDark ? const Color(0x38FFFFFF) : const Color(0x30000000)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.8
       ..strokeCap = StrokeCap.square;
@@ -230,14 +313,14 @@ class _SolidMatteDiskPainter extends CustomPainter {
       canvas.drawLine(p1, p2, spokePaint);
     }
 
-    // D. Outer rim graduations (clean minimal ticks)
+    // Outer rim graduations (clean minimal ticks)
     final tickPaint = Paint()
-      ..color = isDark ? const Color(0x38FFFFFF) : const Color(0x25000000)
+      ..color = isDark ? const Color(0x40FFFFFF) : const Color(0x2A000000)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2;
 
     final majorTickPaint = Paint()
-      ..color = isDark ? const Color(0x75FFFFFF) : const Color(0x50000000)
+      ..color = isDark ? const Color(0x80FFFFFF) : const Color(0x55000000)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
 
@@ -253,13 +336,13 @@ class _SolidMatteDiskPainter extends CustomPainter {
       canvas.drawLine(p1, p2, isMajor ? majorTickPaint : tickPaint);
     }
 
-    // E. Solid Physical Center Hub
+    // Solid Physical Center Hub
     final hubRadius = radius * 0.24;
     final hubPaint = Paint()
-      ..color = isDark ? const Color(0xFF191D22) : const Color(0xFFE8ECF0)
+      ..color = isDark ? const Color(0xFF181B20) : const Color(0xFFE6EBF0)
       ..style = PaintingStyle.fill;
     final hubBorderPaint = Paint()
-      ..color = isDark ? const Color(0xFF38404A) : const Color(0xFFA5ADB8)
+      ..color = isDark ? const Color(0xFF38404B) : const Color(0xFFA5ADB8)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
 
@@ -298,72 +381,8 @@ class _SolidMatteDiskPainter extends CustomPainter {
     canvas.drawCircle(Offset.zero, spindleRadius, spindleBorder);
   }
 
-  Shader _buildRadialDiffusionShader(Offset center, double radius) {
-    // Exact requested color progression:
-    // Black theme: #121212 -> #1B2E24 -> #28593D -> #3FA36C
-    // White mode:  #FFFFFF -> #F2F9F3 -> #A8D5BA -> #2E8B57
-    final c0 = isDark ? AppTheme.darkStage0 : AppTheme.lightStage0;
-    final c1 = isDark ? AppTheme.darkStage1 : AppTheme.lightStage1;
-    final c2 = isDark ? AppTheme.darkStage2 : AppTheme.lightStage2;
-    final c3 = isDark ? AppTheme.darkStage3 : AppTheme.lightStage3;
-
-    if (!isFocusMode || elapsedSeconds <= 0) {
-      return RadialGradient(
-        center: Alignment.center,
-        radius: 1.0,
-        colors: [c0, c0],
-        stops: const [0.0, 1.0],
-      ).createShader(Rect.fromCircle(center: center, radius: radius));
-    }
-
-    final b = baselineSeconds > 0 ? baselineSeconds : 1200;
-    final t1 = (b * 0.70).round().clamp(60, b - 30);
-    final t2 = b;
-    final t3 = t2 + (extra3Seconds > 0 ? extra3Seconds : 180);
-    final t4 = t3 + (extra4Seconds > 0 ? extra4Seconds : 240);
-
-    List<Color> colors;
-    List<double> rawStops;
-
-    if (elapsedSeconds < t1) {
-      final p = (elapsedSeconds / t1).clamp(0.0, 1.0);
-      colors = [c1, Color.lerp(c1, c0, 0.4)!, c0, c0];
-      rawStops = [0.0, (p * 0.5).clamp(0.0, 1.0), p.clamp(0.0, 1.0), 1.0];
-    } else if (elapsedSeconds < t2) {
-      final p = ((elapsedSeconds - t1) / (t2 - t1)).clamp(0.0, 1.0);
-      colors = [c2, Color.lerp(c2, c1, 0.4)!, c1, c0];
-      rawStops = [0.0, (p * 0.5).clamp(0.0, 1.0), (0.5 + p * 0.4).clamp(0.0, 1.0), 1.0];
-    } else if (elapsedSeconds < t3) {
-      final p = ((elapsedSeconds - t2) / (t3 - t2)).clamp(0.0, 1.0);
-      colors = [c3, Color.lerp(c3, c2, 0.4)!, c2, c1];
-      rawStops = [0.0, (p * 0.5).clamp(0.0, 1.0), (0.5 + p * 0.45).clamp(0.0, 1.0), 1.0];
-    } else if (elapsedSeconds < t4) {
-      final p = ((elapsedSeconds - t3) / (t4 - t3)).clamp(0.0, 1.0);
-      colors = [c3, c3, Color.lerp(c2, c3, p)!];
-      rawStops = [0.0, (0.4 + p * 0.55).clamp(0.0, 1.0), 1.0];
-    } else {
-      colors = [c3, c3];
-      rawStops = const [0.0, 1.0];
-    }
-
-    final stops = <double>[];
-    double prev = 0.0;
-    for (int i = 0; i < rawStops.length; i++) {
-      final s = rawStops[i].clamp(prev, 1.0);
-      stops.add(s);
-      prev = s;
-    }
-
-    return RadialGradient(
-      center: Alignment.center,
-      radius: 1.0,
-      colors: colors,
-      stops: stops,
-    ).createShader(Rect.fromCircle(center: center, radius: radius));
-  }
-
   @override
-  bool shouldRepaint(covariant _SolidMatteDiskPainter oldDelegate) {
+  bool shouldRepaint(covariant _ConcentricRingsSpoolPainter oldDelegate) {
     return oldDelegate.elapsedSeconds != elapsedSeconds ||
         oldDelegate.rotationAngle != rotationAngle ||
         oldDelegate.isDark != isDark ||
@@ -372,4 +391,13 @@ class _SolidMatteDiskPainter extends CustomPainter {
         oldDelegate.extra3Seconds != extra3Seconds ||
         oldDelegate.extra4Seconds != extra4Seconds;
   }
+}
+
+class _RingConfig {
+  final double innerR;
+  final double outerR;
+  final Color color;
+  final bool isActive;
+
+  const _RingConfig(this.innerR, this.outerR, this.color, this.isActive);
 }

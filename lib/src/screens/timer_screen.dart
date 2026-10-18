@@ -32,7 +32,6 @@ class _TimerScreenState extends State<TimerScreen> {
   Timer? _ticker;
   int _elapsedSeconds = 0;
   bool _isRunning = false;
-  bool _isPaused = false;
   bool _isFocusMode = true; // Focus vs Rest mode
 
   // Dynamic self-competition milestones
@@ -57,18 +56,17 @@ class _TimerScreenState extends State<TimerScreen> {
 
   void _startStopwatch() {
     _ticker?.cancel();
-
-    // If starting a fresh session (not resuming), compute baseline and randomized extensions
-    if (!_isPaused) {
-      _baselineSeconds = _sessionService.lastFocusDurationSeconds;
-      _extra3Seconds = 120 + _random.nextInt(121); // 120 to 240 seconds (2 to 4 min)
-      _extra4Seconds = 180 + _random.nextInt(181); // 180 to 360 seconds (3 to 6 min)
-    }
-
+    _stopwatch.reset();
     _stopwatch.start();
+
+    // Compute baseline and randomized extensions for this session
+    _baselineSeconds = _sessionService.lastFocusDurationSeconds;
+    _extra3Seconds = 120 + _random.nextInt(121); // 120 to 240 seconds (2 to 4 min)
+    _extra4Seconds = 180 + _random.nextInt(181); // 180 to 360 seconds (3 to 6 min)
+
     setState(() {
+      _elapsedSeconds = 0;
       _isRunning = true;
-      _isPaused = false;
     });
 
     _ticker = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -82,38 +80,44 @@ class _TimerScreenState extends State<TimerScreen> {
     });
   }
 
-  void _pauseStopwatch() {
+  void _stopStopwatch() {
     _ticker?.cancel();
     _stopwatch.stop();
 
-    // Save session upon pause
-    if (_isFocusMode && _elapsedSeconds > 0) {
-      _sessionService.recordSession(SessionModeType.focus, _elapsedSeconds);
-    } else if (!_isFocusMode && _elapsedSeconds > 0) {
-      _sessionService.recordSession(SessionModeType.shortBreak, _elapsedSeconds);
+    // Save session upon stop immediately
+    if (_elapsedSeconds > 0) {
+      if (_isFocusMode) {
+        _sessionService.recordSession(SessionModeType.focus, _elapsedSeconds);
+      } else {
+        _sessionService.recordSession(SessionModeType.shortBreak, _elapsedSeconds);
+      }
     }
 
+    // Reset when stopped so the stopwatch cleanly resets to 0
+    _stopwatch.reset();
     setState(() {
+      _elapsedSeconds = 0;
       _isRunning = false;
-      _isPaused = true;
     });
   }
 
   void _handlePlayPause() {
     if (_isRunning) {
-      _pauseStopwatch();
+      _stopStopwatch();
     } else {
       _startStopwatch();
     }
   }
 
   void _toggleMode() {
-    // If running or paused, save session and reset
-    if (_isRunning || _isPaused) {
-      if (_isFocusMode && _elapsedSeconds > 0) {
-        _sessionService.recordSession(SessionModeType.focus, _elapsedSeconds);
-      } else if (!_isFocusMode && _elapsedSeconds > 0) {
-        _sessionService.recordSession(SessionModeType.shortBreak, _elapsedSeconds);
+    // If running when toggled, save session and reset
+    if (_isRunning) {
+      if (_elapsedSeconds > 0) {
+        if (_isFocusMode) {
+          _sessionService.recordSession(SessionModeType.focus, _elapsedSeconds);
+        } else {
+          _sessionService.recordSession(SessionModeType.shortBreak, _elapsedSeconds);
+        }
       }
       _ticker?.cancel();
       _stopwatch.reset();
@@ -123,7 +127,6 @@ class _TimerScreenState extends State<TimerScreen> {
       _isFocusMode = !_isFocusMode;
       _elapsedSeconds = 0;
       _isRunning = false;
-      _isPaused = false;
     });
   }
 
@@ -153,10 +156,10 @@ class _TimerScreenState extends State<TimerScreen> {
                 sessionService: _sessionService,
                 isFocusMode: _isFocusMode,
                 isRunning: _isRunning,
-                isPaused: _isPaused,
+                isPaused: false,
               ),
 
-              // Component 2: Big solid realistic matte disk (centerpiece)
+              // Component 2: Big solid realistic matte disk with concentric rings countdown
               Expanded(
                 child: Center(
                   child: RetroMatteDisk(
@@ -174,7 +177,7 @@ class _TimerScreenState extends State<TimerScreen> {
               // Component 3: Big solid realistic matte controls
               BottomControls(
                 isRunning: _isRunning,
-                isPaused: _isPaused,
+                isPaused: false,
                 isFocusMode: _isFocusMode,
                 onPlayPause: _handlePlayPause,
                 onToggleMode: _toggleMode,

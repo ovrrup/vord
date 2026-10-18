@@ -32,7 +32,7 @@ void main() {
     expect(find.text('SETTINGS'), findsOneWidget);
   });
 
-  testWidgets('Play button starts stopwatch and pause saves session; no time shown on main deck', (WidgetTester tester) async {
+  testWidgets('Play button starts stopwatch and stop resets & saves session; no time shown on main deck', (WidgetTester tester) async {
     await tester.pumpWidget(const VordApp(
       initialThemeMode: ThemeMode.light,
       animateBackground: false,
@@ -40,7 +40,7 @@ void main() {
 
     // Initial state: START button, no time on deck
     expect(find.text('START'), findsOneWidget);
-    expect(find.text('PAUSE'), findsNothing);
+    expect(find.text('STOP'), findsNothing);
     expect(find.text('00:00'), findsNothing);
 
     // Tap START transport key
@@ -48,16 +48,17 @@ void main() {
     await tester.pump();
 
     // Now running
-    expect(find.text('PAUSE'), findsOneWidget);
+    expect(find.text('STOP'), findsOneWidget);
     expect(find.text('START'), findsNothing);
     expect(find.text('00:00'), findsNothing);
 
-    // Tap PAUSE (pauses and saves focus session)
-    await tester.tap(find.text('PAUSE'));
+    // Tap STOP (stops, resets stopwatch to 0, and saves focus session)
+    await tester.tap(find.text('STOP'));
     await tester.pump();
 
-    // Now paused / ready to resume; still no digital time on main deck
-    expect(find.text('RESUME'), findsOneWidget);
+    // Now reset to 0 and idle; still no digital time on main deck
+    expect(find.text('START'), findsOneWidget);
+    expect(find.text('STOP'), findsNothing);
     expect(find.text('00:00'), findsNothing);
   });
 
