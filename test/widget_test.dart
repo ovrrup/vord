@@ -13,7 +13,7 @@ void main() {
     SoundService.enableAudio = false; // Disable audio playback during unit/widget tests
   });
 
-  testWidgets('App launches to sharp white screen with 3 components and zero digital time on main deck', (WidgetTester tester) async {
+  testWidgets('App launches to white screen with strictly the 3 big minimal matte components', (WidgetTester tester) async {
     await tester.pumpWidget(const VordApp(
       initialThemeMode: ThemeMode.light,
       animateBackground: false,
@@ -30,9 +30,6 @@ void main() {
     expect(find.text('START'), findsOneWidget);
     expect(find.text('FOCUS'), findsOneWidget);
     expect(find.text('SETTINGS'), findsOneWidget);
-
-    // Tape deck faceplate markings
-    expect(find.text('VORD • MASTER TAPE TRANSPORT'), findsOneWidget);
   });
 
   testWidgets('Play button starts stopwatch and pause saves session; no time shown on main deck', (WidgetTester tester) async {
@@ -141,7 +138,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Back on main screen
-    expect(find.text('VORD • MASTER TAPE TRANSPORT'), findsOneWidget);
+    expect(find.text('START'), findsOneWidget);
   });
 
   testWidgets('HistoryScreen displays categorized sessions and recorded times', (WidgetTester tester) async {

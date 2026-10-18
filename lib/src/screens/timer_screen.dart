@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import '../models/session_mode.dart';
 import '../services/session_service.dart';
 import '../services/sound_service.dart';
-import '../theme/app_theme.dart';
 import '../widgets/motivation_banner.dart';
 import '../widgets/physical_matte_controls.dart';
 import '../widgets/retro_matte_disk.dart';
@@ -137,61 +136,19 @@ class _TimerScreenState extends State<TimerScreen> {
     );
   }
 
-  Widget _buildChassisScrew(bool isDark) {
-    return Container(
-      width: 10,
-      height: 10,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: isDark ? const Color(0xFF24282E) : const Color(0xFFD6DCE2),
-        border: Border.all(
-          color: isDark ? const Color(0xFF3E4550) : const Color(0xFF9AA4B0),
-          width: 1.0,
-        ),
-      ),
-      child: Center(
-        child: Container(
-          width: 6,
-          height: 1.2,
-          color: isDark ? const Color(0xFF0F1114) : const Color(0xFF5A626E),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 14.0),
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Sharp Tape Deck Top Faceplate Header with corner screws
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildChassisScrew(isDark),
-                  Text(
-                    'VORD • MASTER TAPE TRANSPORT',
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 2.0,
-                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                    ),
-                  ),
-                  _buildChassisScrew(isDark),
-                ],
-              ),
-
-              const SizedBox(height: 8),
-
-              // 1. Motivation greeting banner (sharp & minimal, zero time display)
+              // Component 1: Minimal motivation greeting banner
               MotivationBanner(
                 sessionService: _sessionService,
                 isFocusMode: _isFocusMode,
@@ -199,8 +156,7 @@ class _TimerScreenState extends State<TimerScreen> {
                 isPaused: _isPaused,
               ),
 
-              // 2. Sharp tape recorder spool disk with center-outward color spread
-              // (NO digital time on the disk - time is viewed in Category & History under Settings)
+              // Component 2: Big solid realistic matte disk (centerpiece)
               Expanded(
                 child: Center(
                   child: RetroMatteDisk(
@@ -215,7 +171,7 @@ class _TimerScreenState extends State<TimerScreen> {
                 ),
               ),
 
-              // 3. Razor-sharp physical tape recorder controls
+              // Component 3: Big solid realistic matte controls
               BottomControls(
                 isRunning: _isRunning,
                 isPaused: _isPaused,
@@ -223,26 +179,6 @@ class _TimerScreenState extends State<TimerScreen> {
                 onPlayPause: _handlePlayPause,
                 onToggleMode: _toggleMode,
                 onOpenSettings: _openSettings,
-              ),
-
-              const SizedBox(height: 8),
-
-              // Tape Deck Bottom Chassis Screws
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildChassisScrew(isDark),
-                  Text(
-                    'MODEL TC-01 • HIGH BIAS',
-                    style: TextStyle(
-                      fontSize: 8.5,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.8,
-                      color: (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary).withAlpha(150),
-                    ),
-                  ),
-                  _buildChassisScrew(isDark),
-                ],
               ),
             ],
           ),

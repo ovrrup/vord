@@ -4,9 +4,8 @@ import '../services/session_service.dart';
 import '../services/sound_service.dart';
 import '../theme/app_theme.dart';
 
-/// Reusable physical matte button styled as a razor-sharp vintage tape recorder transport key.
-/// Features sharp 90-degree industrial corners, mechanical travel depression,
-/// and plays real mechanical solenoid / switch click audio.
+/// Reusable physical matte button with solid physical presence,
+/// deep mechanical travel depression, and real mechanical latch/click audio.
 class PhysicalMatteButton extends StatefulWidget {
   final VoidCallback onTap;
   final Widget child;
@@ -57,9 +56,12 @@ class _PhysicalMatteButtonState extends State<PhysicalMatteButton> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final defaultBg = isDark ? const Color(0xFF181B20) : const Color(0xFFF2F5F8);
-    final borderCol = widget.borderColor ?? (isDark ? const Color(0xFF2C323A) : const Color(0xFFCBD2DA));
+    final defaultBg = isDark ? const Color(0xFF1B1E23) : const Color(0xFFF0F3F7);
+    final borderCol = widget.borderColor ?? (isDark ? const Color(0xFF2C323B) : const Color(0xFFCAD1D9));
     final bg = widget.backgroundColor ?? defaultBg;
+
+    final shadowHard = isDark ? const Color(0xFF090A0C) : const Color(0xFFA8B1BB);
+    final shadowAmbient = isDark ? const Color(0x66000000) : const Color(0x22000000);
 
     return GestureDetector(
       onTapDown: _handleTapDown,
@@ -67,27 +69,37 @@ class _PhysicalMatteButtonState extends State<PhysicalMatteButton> {
       onTapCancel: _handleTapCancel,
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 40),
+        duration: const Duration(milliseconds: 35),
         margin: EdgeInsets.only(
-          top: _isPressed ? 4.0 : 0.0,
-          bottom: _isPressed ? 0.0 : 4.0,
+          top: _isPressed ? 5.5 : 0.0,
+          bottom: _isPressed ? 0.0 : 5.5,
         ),
         padding: widget.padding,
         decoration: BoxDecoration(
           color: _isPressed
-              ? (isDark ? const Color(0xFF121417) : const Color(0xFFE2E7ED))
+              ? (isDark ? const Color(0xFF131518) : const Color(0xFFDFE4EA))
               : bg,
-          borderRadius: widget.borderRadius > 0 ? BorderRadius.circular(widget.borderRadius) : BorderRadius.zero,
+          borderRadius: widget.borderRadius > 0
+              ? BorderRadius.circular(widget.borderRadius)
+              : BorderRadius.zero,
           border: Border.all(
             color: borderCol,
             width: 1.5,
           ),
           boxShadow: [
+            // Solid physical extrusion edge
             BoxShadow(
-              color: isDark ? const Color(0xFF08090A) : const Color(0xFFB0B8C2),
-              offset: Offset(0, _isPressed ? 0.0 : 4.0),
+              color: shadowHard,
+              offset: Offset(0, _isPressed ? 1.0 : 5.5),
               blurRadius: 0,
             ),
+            // Diffuse ambient contact shadow
+            if (!_isPressed)
+              BoxShadow(
+                color: shadowAmbient,
+                offset: const Offset(0, 8.0),
+                blurRadius: 12.0,
+              ),
           ],
         ),
         child: widget.child,
@@ -96,9 +108,9 @@ class _PhysicalMatteButtonState extends State<PhysicalMatteButton> {
   }
 }
 
-/// Component 3: Controls styled strictly as razor-sharp tape recorder transport keys.
-/// - Left: Very large Play / Pause / Resume transport key (with solenoid latch sound).
-/// - Right: Mode Switch (1/3rd size) on top + Settings (2/3rd size) on bottom.
+/// Component 3: Big, minimal, solid realistic matte controls.
+/// - Left: A very very large Play / Pause / Resume button.
+/// - Right: Mode switch button (top, exactly 1/3rd size) and Settings button (bottom, exactly 2/3rd size).
 class BottomControls extends StatelessWidget {
   final bool isRunning;
   final bool isPaused;
@@ -122,8 +134,8 @@ class BottomControls extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    const controlsHeight = 120.0;
-    const buttonSpacing = 8.0;
+    const controlsHeight = 135.0;
+    const buttonSpacing = 10.0;
 
     final availableRightHeight = controlsHeight - buttonSpacing;
     final modeButtonHeight = availableRightHeight * (1.0 / 3.0);
@@ -134,7 +146,7 @@ class BottomControls extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 1. Very Large Tape Recorder Transport Key (Left: Play/Pause/Resume)
+          // 1. Very Very Large Play / Pause / Resume Button (Left)
           Expanded(
             flex: 3,
             child: PhysicalMatteButton(
@@ -142,20 +154,20 @@ class BottomControls extends StatelessWidget {
               isTransportKey: true,
               borderRadius: 0.0,
               backgroundColor: isRunning
-                  ? (isDark ? const Color(0xFF1B261E) : const Color(0xFFEAF5EE))
-                  : (isDark ? const Color(0xFF191D22) : const Color(0xFFF4F6F9)),
+                  ? (isDark ? const Color(0xFF1B271F) : const Color(0xFFE9F5ED))
+                  : (isDark ? const Color(0xFF1C2025) : const Color(0xFFF4F6F9)),
               borderColor: isRunning
                   ? (isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57))
-                  : (isDark ? const Color(0xFF2C323A) : const Color(0xFFD0D7DE)),
+                  : (isDark ? const Color(0xFF2E353F) : const Color(0xFFCFD6DE)),
               child: Stack(
                 children: [
-                  // Tape Deck Active Transport Tally Lamp (glow strip when running)
+                  // Discrete solid active indicator bar along the top edge
                   if (isRunning)
                     Positioned(
                       top: 0,
                       left: 0,
                       right: 0,
-                      height: 3,
+                      height: 3.5,
                       child: Container(
                         color: isDark
                             ? const Color(0xFF3FA36C)
@@ -173,18 +185,18 @@ class BottomControls extends StatelessWidget {
                               : (isPaused
                                   ? Icons.play_arrow_rounded
                                   : Icons.play_arrow_rounded),
-                          size: 38,
+                          size: 42,
                           color: isDark
                               ? AppTheme.darkTextPrimary
                               : AppTheme.lightTextPrimary,
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 12),
                         Text(
                           isRunning
                               ? 'PAUSE'
                               : (isPaused ? 'RESUME' : 'START'),
                           style: TextStyle(
-                            fontSize: 22,
+                            fontSize: 24,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 2.0,
                             color: isDark
@@ -202,12 +214,12 @@ class BottomControls extends StatelessWidget {
 
           const SizedBox(width: buttonSpacing),
 
-          // 2. Right Side Column: Tape Deck Selector Switches
+          // 2. Right Side Column: Mode Switch (1/3rd) & Settings (2/3rd)
           Expanded(
             flex: 1,
             child: Column(
               children: [
-                // Top: Mode Switch Key (exactly 1/3rd height)
+                // Top: Mode Switch Button (exactly 1/3rd size)
                 SizedBox(
                   height: modeButtonHeight,
                   width: double.infinity,
@@ -233,7 +245,7 @@ class BottomControls extends StatelessWidget {
                           Text(
                             isFocusMode ? 'FOCUS' : 'REST',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 11.5,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 1.0,
                               color: isDark
@@ -249,7 +261,7 @@ class BottomControls extends StatelessWidget {
 
                 const SizedBox(height: buttonSpacing),
 
-                // Bottom: Settings Key (exactly 2/3rd height)
+                // Bottom: Settings Button (exactly 2/3rd size)
                 SizedBox(
                   height: settingsButtonHeight,
                   width: double.infinity,
@@ -262,16 +274,16 @@ class BottomControls extends StatelessWidget {
                         children: [
                           Icon(
                             Icons.tune_rounded,
-                            size: 20,
+                            size: 22,
                             color: isDark
                                 ? AppTheme.darkTextPrimary
                                 : AppTheme.lightTextPrimary,
                           ),
-                          const SizedBox(height: 3),
+                          const SizedBox(height: 4),
                           Text(
                             'SETTINGS',
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 10.5,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 1.0,
                               color: isDark
@@ -293,7 +305,7 @@ class BottomControls extends StatelessWidget {
   }
 }
 
-/// Sharp Settings Modal with direct Category & Session History access and Theme controls.
+/// Solid, clean Settings Modal with direct Category & Session History access and Theme controls.
 class ThemeSettingsSheet extends StatelessWidget {
   final ThemeMode currentThemeMode;
   final ValueChanged<ThemeMode> onThemeChanged;
@@ -347,10 +359,10 @@ class ThemeSettingsSheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Sharp machine drag handle
+          // Drag handle
           Center(
             child: Container(
-              width: 40,
+              width: 36,
               height: 3,
               color: isDark ? const Color(0xFF404854) : const Color(0xFFC0C7D0),
             ),
