@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vord/main.dart';
+import 'package:vord/src/models/session_mode.dart';
+import 'package:vord/src/screens/history_screen.dart';
+import 'package:vord/src/services/session_service.dart';
 import 'package:vord/src/services/sound_service.dart';
 
 void main() {
@@ -112,17 +115,11 @@ void main() {
     expect(prefs.getString('theme_mode'), 'dark');
   });
 
-  testWidgets('Settings history option navigates to category screen and displays recorded session times', (WidgetTester tester) async {
+  testWidgets('Settings history option navigates to category screen and back', (WidgetTester tester) async {
     await tester.pumpWidget(const VordApp(
       initialThemeMode: ThemeMode.light,
       animateBackground: false,
     ));
-
-    // Tap START then PAUSE to create a recorded session
-    await tester.tap(find.text('START'));
-    await tester.pump(const Duration(seconds: 2));
-    await tester.tap(find.text('PAUSE'));
-    await tester.pump();
 
     // Open Settings
     await tester.tap(find.text('SETTINGS'));
@@ -137,9 +134,7 @@ void main() {
     expect(find.text('ALL LOGS'), findsOneWidget);
     expect(find.text('FOCUS SESSIONS'), findsOneWidget);
     expect(find.text('REST INTERVALS'), findsOneWidget);
-
-    // Verify logged session duration is displayed
-    expect(find.text('FOCUS SESSION'), findsOneWidget);
+    expect(find.text('NO RECORDED SESSIONS YET'), findsOneWidget);
 
     // Tap back button
     await tester.tap(find.byIcon(Icons.arrow_back_rounded));
@@ -147,5 +142,21 @@ void main() {
 
     // Back on main screen
     expect(find.text('VORD • MASTER TAPE TRANSPORT'), findsOneWidget);
+  });
+
+  testWidgets('HistoryScreen displays categorized sessions and recorded times', (WidgetTester tester) async {
+    final sessionService = SessionService();
+    sessionService.recordSession(SessionModeType.focus, 1500); // 25m
+    sessionService.recordSession(SessionModeType.shortBreak, 300); // 5m
+
+    await tester.pumpWidget(MaterialApp(
+      home: HistoryScreen(sessionService: sessionService),
+    ));
+
+    expect(find.text('SESSION LOG & HISTORY'), findsOneWidget);
+    expect(find.text('FOCUS SESSION'), findsOneWidget);
+    expect(find.text('REST INTERVAL'), findsOneWidget);
+    expect(find.text('25m 00s'), findsOneWidget);
+    expect(find.text('5m 00s'), findsOneWidget);
   });
 }
