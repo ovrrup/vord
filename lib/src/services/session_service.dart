@@ -57,4 +57,18 @@ class SessionService extends ChangeNotifier {
             s.completedAt.day == now.day)
         .length;
   }
+
+  /// Returns the duration in seconds of the most recent focus session,
+  /// or 20 minutes (1200s) baseline if no previous session has been logged yet.
+  int get lastFocusDurationSeconds {
+    final focusSessions =
+        _sessions.where((s) => s.modeType == SessionModeType.focus).toList();
+    if (focusSessions.isEmpty) {
+      return 20 * 60; // 20 minutes default baseline
+    }
+    final lastDuration = focusSessions.last.durationSeconds;
+    return lastDuration >= 300 ? lastDuration : 300;
+  }
+
+  int get lastFocusDurationMinutes => (lastFocusDurationSeconds / 60).round();
 }

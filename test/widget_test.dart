@@ -28,30 +28,33 @@ void main() {
     expect(find.text('SETTINGS'), findsOneWidget);
   });
 
-  testWidgets('Play button starts stopwatch and pause saves session', (WidgetTester tester) async {
+  testWidgets('Play button starts stopwatch, hides time while running, and pause saves session', (WidgetTester tester) async {
     await tester.pumpWidget(const VordApp(
       initialThemeMode: ThemeMode.light,
       animateBackground: false,
     ));
 
-    // Initial state
+    // Initial state: time is visible
     expect(find.text('START'), findsOneWidget);
     expect(find.text('PAUSE'), findsNothing);
+    expect(find.text('00:00'), findsOneWidget);
 
     // Tap large START button
     await tester.tap(find.text('START'));
     await tester.pump();
 
-    // Now running
+    // Now running: time is hidden per user requirement
     expect(find.text('PAUSE'), findsOneWidget);
     expect(find.text('START'), findsNothing);
+    expect(find.text('00:00'), findsNothing);
 
     // Tap PAUSE (pauses and saves focus session)
     await tester.tap(find.text('PAUSE'));
     await tester.pump();
 
-    // Now paused / ready to resume
+    // Now paused / ready to resume, time becomes visible again
     expect(find.text('RESUME'), findsOneWidget);
+    expect(find.text('00:00'), findsOneWidget);
   });
 
   testWidgets('Mode switch button switches between Focus and Rest', (WidgetTester tester) async {

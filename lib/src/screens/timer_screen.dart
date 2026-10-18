@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/session_mode.dart';
 import '../services/session_service.dart';
@@ -25,11 +26,18 @@ class TimerScreen extends StatefulWidget {
 class _TimerScreenState extends State<TimerScreen> {
   final SessionService _sessionService = SessionService();
   final Stopwatch _stopwatch = Stopwatch();
+  final math.Random _random = math.Random();
+
   Timer? _ticker;
   int _elapsedSeconds = 0;
   bool _isRunning = false;
   bool _isPaused = false;
   bool _isFocusMode = true; // Focus vs Rest mode
+
+  // Dynamic self-competition milestones
+  int _baselineSeconds = 1200; // Default 20m baseline
+  int _extra3Seconds = 180;    // Stage 3 extra time (120-240s)
+  int _extra4Seconds = 240;    // Stage 4 extra time (180-360s)
 
   @override
   void dispose() {
@@ -41,6 +49,14 @@ class _TimerScreenState extends State<TimerScreen> {
 
   void _startStopwatch() {
     _ticker?.cancel();
+
+    // If starting a fresh session (not resuming), compute baseline and randomized extensions
+    if (!_isPaused) {
+      _baselineSeconds = _sessionService.lastFocusDurationSeconds;
+      _extra3Seconds = 120 + _random.nextInt(121); // 120 to 240 seconds (2 to 4 min)
+      _extra4Seconds = 180 + _random.nextInt(181); // 180 to 360 seconds (3 to 6 min)
+    }
+
     _stopwatch.start();
     setState(() {
       _isRunning = true;
@@ -88,6 +104,8 @@ class _TimerScreenState extends State<TimerScreen> {
     if (_isRunning || _isPaused) {
       if (_isFocusMode && _elapsedSeconds > 0) {
         _sessionService.recordSession(SessionModeType.focus, _elapsedSeconds);
+      } else if (!_isFocusMode && _elapsedSeconds > 0) {
+        _sessionService.recordSession(SessionModeType.shortBreak, _elapsedSeconds);
       }
       _ticker?.cancel();
       _stopwatch.reset();
@@ -134,6 +152,11 @@ class _TimerScreenState extends State<TimerScreen> {
               MotivationBanner(
                 sessionService: _sessionService,
                 isFocusMode: _isFocusMode,
+                isRunning: _isRunning,
+                isPaused: _isPaused,
+                elapsedSeconds: _elapsedSeconds,
+                baselineSeconds: _baselineSeconds,
+                extra3Seconds: _extra3Seconds,
               ),
 
               // 2. Rotating physical matte disk with center-outward color spread
@@ -145,6 +168,9 @@ class _TimerScreenState extends State<TimerScreen> {
                     isFocusMode: _isFocusMode,
                     animate: widget.animateBackground,
                     formattedTime: _formatTime(_elapsedSeconds),
+                    baselineSeconds: _baselineSeconds,
+                    extra3Seconds: _extra3Seconds,
+                    extra4Seconds: _extra4Seconds,
                   ),
                 ),
               ),
