@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import '../theme/app_theme.dart';
 
-/// Component 2: A squircle box housing the rotating matte tape spool disk,
-/// featuring precision machined flush corner bolts, and a top-right info area
-/// containing 4 rectangular box lights representing the milestone stages.
-/// The box lights only illuminate when their decided milestone time is up.
+/// Component 2: Authentic audio cassette tape cartridge housing holding a rotating
+/// matte tape spool disk inside. Features precision cassette shell mechanics:
+/// tactile side grip ribs, recessed spool observation well, magnetic tape path,
+/// turnaround guide rollers, lower trapezoidal tape-head bay with capstan holes,
+/// 4 flush corner assembly bolts, and a top-right sharp 4-segment milestone light bar
+/// in a single contiguous row without spacing.
 class RetroMatteDisk extends StatefulWidget {
   final int elapsedSeconds;
   final bool isRunning;
@@ -114,19 +116,19 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Comfortable, balanced squircle box sizing that fits available center space
+        // Balanced cassette cartridge dimensions that fill the available center space
         final availableSize = math.min(constraints.maxWidth, constraints.maxHeight);
         final boxSize = math.min(availableSize * 0.96, 360.0);
-        final diskDiameter = boxSize * 0.74;
+        final diskDiameter = boxSize * 0.68;
 
         return Container(
           width: boxSize,
           height: boxSize,
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF15181C) : const Color(0xFFF4F6F9),
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: isDark ? const Color(0xFF262C34) : const Color(0xFFD6DCE4),
+              color: isDark ? const Color(0xFF282D36) : const Color(0xFFD2D8E0),
               width: 1.5,
             ),
             boxShadow: [
@@ -145,7 +147,19 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
           ),
           child: Stack(
             children: [
-              // 1. Recessed Platter Well with Rotating Matte Tape Spool Disk
+              // 1. Physical Cassette Shell Anatomy:
+              // Side grip ribs, recessed observation well, tape ribbon path,
+              // turnaround idler guide rollers, and lower trapezoidal tape-head bay
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _CassetteShellPainter(
+                    isDark: isDark,
+                    diskRadius: diskDiameter / 2,
+                  ),
+                ),
+              ),
+
+              // 2. Rotating Matte Tape Spool Disk sitting inside the observation well
               Center(
                 child: Container(
                   width: diskDiameter,
@@ -170,7 +184,7 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
                 ),
               ),
 
-              // 2. Machined Flush Screws/Bolts at the 4 corners of the squircle plate
+              // 3. Machined Flush Assembly Bolts at the 4 corners of the cassette housing
               Positioned(
                 top: 13,
                 left: 13,
@@ -204,9 +218,9 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
                 ),
               ),
 
-              // 3. Top-Right Info Area: 4 Box Lights indicating milestone stages
+              // 4. Top-Right Sharp 4-Segment Milestone Light Bar in One Row Without Spacing
               Positioned(
-                top: 12,
+                top: 13,
                 right: 34,
                 child: TopRightInfoPanel(
                   elapsedSeconds: widget.elapsedSeconds,
@@ -222,6 +236,205 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
         );
       },
     );
+  }
+}
+
+/// Precision-drawn cassette shell anatomy.
+class _CassetteShellPainter extends CustomPainter {
+  final bool isDark;
+  final double diskRadius;
+
+  const _CassetteShellPainter({
+    required this.isDark,
+    required this.diskRadius,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final center = Offset(w / 2, h / 2);
+
+    // 1. Inset Outer Chamfer Line around cassette shell
+    final chamferPaint = Paint()
+      ..color = isDark ? const Color(0xFF222730) : const Color(0xFFDDE3EB)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    final chamferRRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(3.5, 3.5, w - 7.0, h - 7.0),
+      const Radius.circular(22),
+    );
+    canvas.drawRRect(chamferRRect, chamferPaint);
+
+    // 2. Tactile Side Grip Ribs (5 recessed horizontal serration lines on left and right)
+    final ribDarkColor = isDark ? const Color(0xFF101317) : const Color(0xFFCAD1DA);
+    final ribLightColor = isDark ? const Color(0xFF262C36) : const Color(0xFFFFFFFF);
+    final ribDarkPaint = Paint()
+      ..color = ribDarkColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+    final ribLightPaint = Paint()
+      ..color = ribLightColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    const ribCount = 5;
+    final ribStartY = h * 0.38;
+    const ribSpacing = 7.0;
+    const ribLength = 11.0;
+
+    for (int i = 0; i < ribCount; i++) {
+      final y = ribStartY + i * ribSpacing;
+      // Left side grip ribs
+      canvas.drawLine(Offset(4.5, y), Offset(4.5 + ribLength, y), ribDarkPaint);
+      canvas.drawLine(Offset(4.5, y + 1.2), Offset(4.5 + ribLength, y + 1.2), ribLightPaint);
+
+      // Right side grip ribs
+      canvas.drawLine(Offset(w - 4.5 - ribLength, y), Offset(w - 4.5, y), ribDarkPaint);
+      canvas.drawLine(Offset(w - 4.5 - ribLength, y + 1.2), Offset(w - 4.5, y + 1.2), ribLightPaint);
+    }
+
+    // 3. Central Observation Well (Recessed cavity where the spool disk rotates)
+    final wellRadius = diskRadius + 4.5;
+    final wellFill = Paint()
+      ..color = isDark ? const Color(0xFF101215) : const Color(0xFFE8EDF2)
+      ..style = PaintingStyle.fill;
+    final wellBorder = Paint()
+      ..color = isDark ? const Color(0xFF202630) : const Color(0xFFD0D7E1)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    canvas.drawCircle(center, wellRadius, wellFill);
+    canvas.drawCircle(center, wellRadius, wellBorder);
+
+    // Inner drop shadow rim for optical mechanical depth inside the cassette cavity
+    final innerShadow = Paint()
+      ..color = isDark ? const Color(0x60000000) : const Color(0x18000000)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0;
+    canvas.drawCircle(center, wellRadius - 1.5, innerShadow);
+
+    // Tape Pack Calibration Scale (5 subtle index tick marks at left and right of the observation well)
+    final tickPaint = Paint()
+      ..color = isDark ? const Color(0x40FFFFFF) : const Color(0x35000000)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    for (int i = -2; i <= 2; i++) {
+      final tickY = center.dy + i * 10.0;
+      // Left calibration ticks
+      canvas.drawLine(Offset(center.dx - wellRadius + 2, tickY), Offset(center.dx - wellRadius + 7, tickY), tickPaint);
+      // Right calibration ticks
+      canvas.drawLine(Offset(center.dx + wellRadius - 7, tickY), Offset(center.dx + wellRadius - 2, tickY), tickPaint);
+    }
+
+    // 4. Magnetic Tape Ribbon & Lower Turnaround Guide Rollers
+    final leftRollerCenter = Offset(w * 0.19, h * 0.825);
+    final rightRollerCenter = Offset(w * 0.81, h * 0.825);
+
+    // Magnetic oxide tape path ribbon
+    final tapePaint = Paint()
+      ..color = isDark ? const Color(0xFF0B0D0F) : const Color(0xFF24282D)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0
+      ..strokeCap = StrokeCap.round;
+
+    // Horizontal bottom tape span across rollers
+    canvas.drawLine(leftRollerCenter, rightRollerCenter, tapePaint);
+
+    // Left diagonal tape feed up to spool
+    final leftTangentPoint = Offset(center.dx - diskRadius * 0.75, center.dy + diskRadius * 0.65);
+    canvas.drawLine(leftRollerCenter, leftTangentPoint, tapePaint);
+
+    // Right diagonal tape feed up to spool
+    final rightTangentPoint = Offset(center.dx + diskRadius * 0.75, center.dy + diskRadius * 0.65);
+    canvas.drawLine(rightRollerCenter, rightTangentPoint, tapePaint);
+
+    // Turnaround Guide Rollers (Concentric precision idler pulleys)
+    _drawGuideRoller(canvas, leftRollerCenter, 7.5, isDark);
+    _drawGuideRoller(canvas, rightRollerCenter, 7.5, isDark);
+
+    // 5. Trapezoidal Lower Tape-Head Bay
+    final bayTopY = h * 0.855;
+    final bayBottomY = h - 3.5;
+    final halfTopW = (w * 0.58) / 2;
+    final halfBottomW = (w * 0.46) / 2;
+
+    final headBayPath = Path()
+      ..moveTo(center.dx - halfTopW, bayTopY)
+      ..lineTo(center.dx + halfTopW, bayTopY)
+      ..lineTo(center.dx + halfBottomW, bayBottomY)
+      ..lineTo(center.dx - halfBottomW, bayBottomY)
+      ..close();
+
+    final bayFill = Paint()
+      ..color = isDark ? const Color(0xFF131518) : const Color(0xFFEDF1F6)
+      ..style = PaintingStyle.fill;
+    final bayBorder = Paint()
+      ..color = isDark ? const Color(0xFF242A33) : const Color(0xFFCAD2DC)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+
+    canvas.drawPath(headBayPath, bayFill);
+    canvas.drawPath(headBayPath, bayBorder);
+
+    // Two Capstan Shaft Clearance Holes inside the head bay
+    final leftCapstanCenter = Offset(center.dx - w * 0.15, h * 0.905);
+    final rightCapstanCenter = Offset(center.dx + w * 0.15, h * 0.905);
+    _drawCapstanHole(canvas, leftCapstanCenter, 3.2, isDark);
+    _drawCapstanHole(canvas, rightCapstanCenter, 3.2, isDark);
+
+    // Center Playhead Window Notch
+    final headNotchRect = Rect.fromCenter(
+      center: Offset(center.dx, h * 0.905),
+      width: 14.0,
+      height: 7.0,
+    );
+    final notchPaint = Paint()
+      ..color = isDark ? const Color(0xFF090A0D) : const Color(0xFFD6DCE4)
+      ..style = PaintingStyle.fill;
+    canvas.drawRect(headNotchRect, notchPaint);
+  }
+
+  void _drawGuideRoller(Canvas canvas, Offset center, double outerRadius, bool isDark) {
+    // Outer flanged guide collar
+    final flangePaint = Paint()
+      ..color = isDark ? const Color(0xFF282E37) : const Color(0xFFCCD3DD)
+      ..style = PaintingStyle.fill;
+    final flangeBorder = Paint()
+      ..color = isDark ? const Color(0xFF38404D) : const Color(0xFFB5BDC8)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    canvas.drawCircle(center, outerRadius, flangePaint);
+    canvas.drawCircle(center, outerRadius, flangeBorder);
+
+    // Inner tape race groove
+    final racePaint = Paint()
+      ..color = isDark ? const Color(0xFF14171A) : const Color(0xFFE2E7ED)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, outerRadius * 0.65, racePaint);
+
+    // Polished stainless steel center axle pin
+    final pinPaint = Paint()
+      ..color = isDark ? const Color(0xFF8B949E) : const Color(0xFF57606A)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, outerRadius * 0.28, pinPaint);
+  }
+
+  void _drawCapstanHole(Canvas canvas, Offset center, double radius, bool isDark) {
+    final holePaint = Paint()
+      ..color = isDark ? const Color(0xFF090A0C) : const Color(0xFF1E2226)
+      ..style = PaintingStyle.fill;
+    final collarPaint = Paint()
+      ..color = isDark ? const Color(0xFF2B323C) : const Color(0xFFBCC4CE)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    canvas.drawCircle(center, radius, holePaint);
+    canvas.drawCircle(center, radius + 1.5, collarPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _CassetteShellPainter oldDelegate) {
+    return oldDelegate.isDark != isDark || oldDelegate.diskRadius != diskRadius;
   }
 }
 
@@ -303,7 +516,7 @@ class _MachinedBoltPainter extends CustomPainter {
   }
 }
 
-/// Top-right info panel housing 4 horizontal box lights representing the milestone stages.
+/// Top-right info panel housing 4 sharp, contiguous box lights in a single row without spacing.
 class TopRightInfoPanel extends StatelessWidget {
   final int elapsedSeconds;
   final bool isFocusMode;
@@ -339,10 +552,9 @@ class TopRightInfoPanel extends StatelessWidget {
 
     return Container(
       key: const Key('info_area_stage_lights'),
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3.5),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F1114) : const Color(0xFFE5EAF0),
-        borderRadius: BorderRadius.circular(5),
+        color: isDark ? const Color(0xFF0E1013) : const Color(0xFFE2E7EC),
+        borderRadius: BorderRadius.zero, // Razor-sharp industrial container
         border: Border.all(
           color: isDark ? const Color(0xFF222830) : const Color(0xFFCAD1DA),
           width: 1.0,
@@ -350,33 +562,39 @@ class TopRightInfoPanel extends StatelessWidget {
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        // In one row WITHOUT any spacing between them
         children: [
           StageBoxLight(
             key: const Key('box_light_1'),
             index: 1,
             isLit: stage1Lit,
             isDark: isDark,
+            isFirst: true,
+            isLast: false,
           ),
-          const SizedBox(width: 4),
           StageBoxLight(
             key: const Key('box_light_2'),
             index: 2,
             isLit: stage2Lit,
             isDark: isDark,
+            isFirst: false,
+            isLast: false,
           ),
-          const SizedBox(width: 4),
           StageBoxLight(
             key: const Key('box_light_3'),
             index: 3,
             isLit: stage3Lit,
             isDark: isDark,
+            isFirst: false,
+            isLast: false,
           ),
-          const SizedBox(width: 4),
           StageBoxLight(
             key: const Key('box_light_4'),
             index: 4,
             isLit: stage4Lit,
             isDark: isDark,
+            isFirst: false,
+            isLast: true,
           ),
         ],
       ),
@@ -384,17 +602,21 @@ class TopRightInfoPanel extends StatelessWidget {
   }
 }
 
-/// A single rectangular box light representing a stage milestone.
+/// A single sharp rectangular box light segment in the contiguous milestone indicator bar.
 class StageBoxLight extends StatelessWidget {
   final int index; // 1, 2, 3, 4
   final bool isLit;
   final bool isDark;
+  final bool isFirst;
+  final bool isLast;
 
   const StageBoxLight({
     super.key,
     required this.index,
     required this.isLit,
     required this.isDark,
+    this.isFirst = false,
+    this.isLast = false,
   });
 
   @override
@@ -414,9 +636,9 @@ class StageBoxLight extends StatelessWidget {
           borderColor = const Color(0xFF2E6347);
           shadows = const [
             BoxShadow(
-              color: Color(0x801B2E24),
-              blurRadius: 6,
-              spreadRadius: 1,
+              color: Color(0x901B2E24),
+              blurRadius: 5,
+              spreadRadius: 0.5,
             ),
           ];
           break;
@@ -425,8 +647,8 @@ class StageBoxLight extends StatelessWidget {
           borderColor = const Color(0xFF3FA36C);
           shadows = const [
             BoxShadow(
-              color: Color(0x9028593D),
-              blurRadius: 7,
+              color: Color(0xA028593D),
+              blurRadius: 6,
               spreadRadius: 1,
             ),
           ];
@@ -436,8 +658,8 @@ class StageBoxLight extends StatelessWidget {
           borderColor = const Color(0xFF5AD491);
           shadows = const [
             BoxShadow(
-              color: Color(0xB03FA36C),
-              blurRadius: 8,
+              color: Color(0xC03FA36C),
+              blurRadius: 7,
               spreadRadius: 1.5,
             ),
           ];
@@ -448,8 +670,8 @@ class StageBoxLight extends StatelessWidget {
           borderColor = const Color(0xFF7EFFBA);
           shadows = const [
             BoxShadow(
-              color: Color(0xD052D18D),
-              blurRadius: 10,
+              color: Color(0xE052D18D),
+              blurRadius: 8,
               spreadRadius: 2,
             ),
           ];
@@ -464,8 +686,8 @@ class StageBoxLight extends StatelessWidget {
           shadows = const [
             BoxShadow(
               color: Color(0x60A8D5BA),
-              blurRadius: 5,
-              spreadRadius: 1,
+              blurRadius: 4,
+              spreadRadius: 0.5,
             ),
           ];
           break;
@@ -475,7 +697,7 @@ class StageBoxLight extends StatelessWidget {
           shadows = const [
             BoxShadow(
               color: Color(0x80A8D5BA),
-              blurRadius: 6,
+              blurRadius: 5,
               spreadRadius: 1,
             ),
           ];
@@ -486,7 +708,7 @@ class StageBoxLight extends StatelessWidget {
           shadows = const [
             BoxShadow(
               color: Color(0x903FA36C),
-              blurRadius: 7,
+              blurRadius: 6,
               spreadRadius: 1.5,
             ),
           ];
@@ -498,7 +720,7 @@ class StageBoxLight extends StatelessWidget {
           shadows = const [
             BoxShadow(
               color: Color(0xB02E8B57),
-              blurRadius: 8,
+              blurRadius: 7,
               spreadRadius: 2,
             ),
           ];
@@ -506,15 +728,24 @@ class StageBoxLight extends StatelessWidget {
       }
     }
 
+    final dividerColor = isDark ? const Color(0xFF222830) : const Color(0xFFCAD1DA);
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOut,
-      width: 13,
+      width: 15,
       height: 9,
       decoration: BoxDecoration(
         color: fillColor,
-        borderRadius: BorderRadius.circular(2),
-        border: Border.all(color: borderColor, width: 1.0),
+        borderRadius: BorderRadius.zero, // Razor-sharp rectangular segment
+        border: Border(
+          top: BorderSide(color: isLit ? borderColor : Colors.transparent, width: 0.8),
+          bottom: BorderSide(color: isLit ? borderColor : Colors.transparent, width: 0.8),
+          left: isFirst ? BorderSide(color: isLit ? borderColor : Colors.transparent, width: 0.8) : BorderSide.none,
+          right: isLast
+              ? BorderSide(color: isLit ? borderColor : Colors.transparent, width: 0.8)
+              : BorderSide(color: dividerColor, width: 1.0),
+        ),
         boxShadow: shadows,
       ),
     );
