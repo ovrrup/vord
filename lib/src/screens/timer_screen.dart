@@ -130,8 +130,8 @@ class _TimerScreenState extends State<TimerScreen> {
     });
   }
 
-  void _openSettings() {
-    ThemeSettingsSheet.show(
+  void _openOptions() {
+    OptionsSheet.show(
       context,
       currentThemeMode: widget.currentThemeMode,
       onThemeChanged: widget.onThemeChanged,
@@ -181,7 +181,7 @@ class _TimerScreenState extends State<TimerScreen> {
                 isFocusMode: _isFocusMode,
                 onPlayPause: _handlePlayPause,
                 onToggleMode: _toggleMode,
-                onOpenSettings: _openSettings,
+                onOpenOptions: _openOptions,
               ),
             ],
           ),

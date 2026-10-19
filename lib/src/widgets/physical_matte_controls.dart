@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../screens/data_backup_screen.dart';
 import '../screens/history_screen.dart';
+import '../screens/info_updates_screen.dart';
 import '../services/session_service.dart';
 import '../services/sound_service.dart';
 import '../theme/app_theme.dart';
@@ -35,6 +36,7 @@ class _PhysicalMatteButtonState extends State<PhysicalMatteButton> {
   bool _isPressed = false;
 
   void _handleTapDown(TapDownDetails details) {
+    if (_isPressed) return;
     setState(() => _isPressed = true);
     if (widget.isTransportKey) {
       SoundService.playTapeTransportLatch();
@@ -44,11 +46,13 @@ class _PhysicalMatteButtonState extends State<PhysicalMatteButton> {
   }
 
   void _handleTapUp(TapUpDetails details) {
+    if (!_isPressed) return;
     setState(() => _isPressed = false);
     widget.onTap();
   }
 
   void _handleTapCancel() {
+    if (!_isPressed) return;
     setState(() => _isPressed = false);
   }
 
@@ -111,14 +115,15 @@ class _PhysicalMatteButtonState extends State<PhysicalMatteButton> {
 
 /// Component 3: Big, minimal, solid realistic matte controls.
 /// - Left: A very very large Play / Pause / Resume button.
-/// - Right: Mode switch button (top, exactly 1/3rd size) and Settings button (bottom, exactly 2/3rd size).
+/// - Right: Mode switch button (top, exactly 1/3rd size) and Options button (bottom, exactly 2/3rd size).
 class BottomControls extends StatelessWidget {
   final bool isRunning;
   final bool isPaused;
   final bool isFocusMode;
   final VoidCallback onPlayPause;
   final VoidCallback onToggleMode;
-  final VoidCallback onOpenSettings;
+  final VoidCallback? onOpenOptions;
+  final VoidCallback? onOpenSettings;
 
   const BottomControls({
     super.key,
@@ -127,8 +132,11 @@ class BottomControls extends StatelessWidget {
     required this.isFocusMode,
     required this.onPlayPause,
     required this.onToggleMode,
-    required this.onOpenSettings,
+    this.onOpenOptions,
+    this.onOpenSettings,
   });
+
+  VoidCallback get _openOptions => onOpenOptions ?? onOpenSettings ?? () {};
 
   @override
   Widget build(BuildContext context) {
@@ -211,7 +219,7 @@ class BottomControls extends StatelessWidget {
 
           const SizedBox(width: buttonSpacing),
 
-          // 2. Right Side Column: Mode Switch (1/3rd) & Settings (2/3rd)
+          // 2. Right Side Column: Mode Switch (1/3rd) & Options (2/3rd)
           Expanded(
             flex: 1,
             child: Column(
@@ -258,12 +266,12 @@ class BottomControls extends StatelessWidget {
 
                 const SizedBox(height: buttonSpacing),
 
-                // Bottom: Settings Button (exactly 2/3rd size)
+                // Bottom: Options Button (exactly 2/3rd size)
                 SizedBox(
                   height: settingsButtonHeight,
                   width: double.infinity,
                   child: PhysicalMatteButton(
-                    onTap: onOpenSettings,
+                    onTap: _openOptions,
                     borderRadius: 0.0,
                     child: Center(
                       child: Column(
@@ -278,7 +286,7 @@ class BottomControls extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'SETTINGS',
+                            'OPTIONS',
                             style: TextStyle(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w800,
@@ -302,13 +310,13 @@ class BottomControls extends StatelessWidget {
   }
 }
 
-/// Solid, clean Settings Modal with Category History, Data & Backup, Sound FX, and Theme controls.
-class ThemeSettingsSheet extends StatefulWidget {
+/// Solid, clean Options Modal with Category History, Data & Backup, Info & Updates, Sound FX, and Theme controls.
+class OptionsSheet extends StatefulWidget {
   final ThemeMode currentThemeMode;
   final ValueChanged<ThemeMode> onThemeChanged;
   final SessionService sessionService;
 
-  const ThemeSettingsSheet({
+  const OptionsSheet({
     super.key,
     required this.currentThemeMode,
     required this.onThemeChanged,
@@ -325,7 +333,7 @@ class ThemeSettingsSheet extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => ThemeSettingsSheet(
+      builder: (context) => OptionsSheet(
         currentThemeMode: currentThemeMode,
         onThemeChanged: onThemeChanged,
         sessionService: sessionService,
@@ -334,10 +342,12 @@ class ThemeSettingsSheet extends StatefulWidget {
   }
 
   @override
-  State<ThemeSettingsSheet> createState() => _ThemeSettingsSheetState();
+  State<OptionsSheet> createState() => _OptionsSheetState();
 }
 
-class _ThemeSettingsSheetState extends State<ThemeSettingsSheet> {
+typedef ThemeSettingsSheet = OptionsSheet;
+
+class _OptionsSheetState extends State<OptionsSheet> {
   late bool _soundEnabled;
   late bool _hapticEnabled;
 
@@ -485,7 +495,62 @@ class _ThemeSettingsSheetState extends State<ThemeSettingsSheet> {
 
               const SizedBox(height: 20),
 
-              // 2. SOUND & HAPTICS
+              // 2. SYSTEM & UPDATES
+              Text(
+                'SYSTEM & UPDATES',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.5,
+                  color: textSecondary,
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // Info & Updates button
+              PhysicalMatteButton(
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const InfoUpdatesScreen(),
+                    ),
+                  );
+                },
+                borderRadius: 0.0,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: 20,
+                      color: isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'INFO & UPDATES',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.8,
+                          color: textPrimary,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 20,
+                      color: textSecondary,
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // 3. SOUND & HAPTICS
               Text(
                 'SOUND & HAPTICS',
                 style: TextStyle(
@@ -593,9 +658,9 @@ class _ThemeSettingsSheetState extends State<ThemeSettingsSheet> {
 
               const SizedBox(height: 20),
 
-              // 3. THEME SETTINGS
+              // 4. THEME OPTIONS
               Text(
-                'THEME SETTING',
+                'THEME OPTIONS',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w800,

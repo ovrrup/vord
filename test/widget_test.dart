@@ -4,14 +4,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vord/main.dart';
 import 'package:vord/src/models/session_mode.dart';
 import 'package:vord/src/screens/history_screen.dart';
+import 'package:vord/src/screens/info_updates_screen.dart';
 import 'package:vord/src/services/session_service.dart';
 import 'package:vord/src/services/sound_service.dart';
+import 'package:vord/src/services/update_service.dart';
 import 'package:vord/src/widgets/retro_matte_disk.dart';
 
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     SoundService.enableAudio = false; // Disable audio playback during unit/widget tests
+    UpdateService.mockCheckHandler = null;
+    UpdateService.mockInstallHandler = null;
   });
 
   testWidgets('App launches to white screen with strictly the 3 big minimal matte components', (WidgetTester tester) async {
@@ -30,10 +34,10 @@ void main() {
     expect(find.byType(StageBoxLight), findsNWidgets(4));
     expect(find.text('00:00'), findsNothing);
 
-    // Component 3: Physical matte controls (Play, Mode Switch, Settings)
+    // Component 3: Physical matte controls (Play, Mode Switch, Options)
     expect(find.text('START'), findsOneWidget);
     expect(find.text('FOCUS'), findsOneWidget);
-    expect(find.text('SETTINGS'), findsOneWidget);
+    expect(find.text('OPTIONS'), findsOneWidget);
   });
 
   testWidgets('Play button starts stopwatch and stop resets & saves session; no time shown on main deck', (WidgetTester tester) async {
@@ -90,19 +94,21 @@ void main() {
     expect(find.text('REST'), findsNothing);
   });
 
-  testWidgets('Settings button opens modal with Category History and Theme options', (WidgetTester tester) async {
+  testWidgets('Options button opens modal with Category History, Updates, and Theme options', (WidgetTester tester) async {
     await tester.pumpWidget(const VordApp(
       initialThemeMode: ThemeMode.light,
       animateBackground: false,
     ));
 
-    // Tap SETTINGS button
-    await tester.tap(find.text('SETTINGS'));
+    // Tap OPTIONS button
+    await tester.tap(find.text('OPTIONS'));
     await tester.pumpAndSettle();
 
-    // Verify Settings Options
+    // Verify Options
     expect(find.text('SESSION HISTORY'), findsOneWidget);
-    expect(find.text('THEME SETTING'), findsOneWidget);
+    expect(find.text('DATA & BACKUP'), findsOneWidget);
+    expect(find.text('INFO & UPDATES'), findsOneWidget);
+    expect(find.text('THEME OPTIONS'), findsOneWidget);
     expect(find.text('White Mode (Light)'), findsOneWidget);
     expect(find.text('Black Theme (Dark)'), findsOneWidget);
     expect(find.text('System Default'), findsOneWidget);
@@ -112,19 +118,19 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify modal dismissed and preference persisted
-    expect(find.text('THEME SETTING'), findsNothing);
+    expect(find.text('THEME OPTIONS'), findsNothing);
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('theme_mode'), 'dark');
   });
 
-  testWidgets('Settings history option navigates to category screen and back', (WidgetTester tester) async {
+  testWidgets('Options history option navigates to category screen and back', (WidgetTester tester) async {
     await tester.pumpWidget(const VordApp(
       initialThemeMode: ThemeMode.light,
       animateBackground: false,
     ));
 
-    // Open Settings
-    await tester.tap(find.text('SETTINGS'));
+    // Open Options
+    await tester.tap(find.text('OPTIONS'));
     await tester.pumpAndSettle();
 
     // Tap Category & Session History
@@ -162,17 +168,18 @@ void main() {
     expect(find.text('5m 00s'), findsOneWidget);
   });
 
-  testWidgets('Settings sheet contains Data & Backup and Sound toggles', (WidgetTester tester) async {
+  testWidgets('Options sheet contains Data & Backup, Sound toggles, and Info & Updates', (WidgetTester tester) async {
     await tester.pumpWidget(const VordApp(
       initialThemeMode: ThemeMode.light,
       animateBackground: false,
     ));
 
-    // Open Settings
-    await tester.tap(find.text('SETTINGS'));
+    // Open Options
+    await tester.tap(find.text('OPTIONS'));
     await tester.pumpAndSettle();
 
     expect(find.text('DATA & BACKUP'), findsOneWidget);
+    expect(find.text('INFO & UPDATES'), findsOneWidget);
     expect(find.text('SOUND & HAPTICS'), findsOneWidget);
     expect(find.text('SOUND FX'), findsOneWidget);
     expect(find.text('HAPTICS'), findsOneWidget);
@@ -197,6 +204,84 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('START'), findsOneWidget);
+  });
+
+  testWidgets('Options info & updates navigates to InfoUpdatesScreen with channel switch and risk warning', (WidgetTester tester) async {
+    await tester.pumpWidget(const VordApp(
+      initialThemeMode: ThemeMode.light,
+      animateBackground: false,
+    ));
+
+    // Open Options
+    await tester.tap(find.text('OPTIONS'));
+    await tester.pumpAndSettle();
+
+    // Tap Info & Updates
+    await tester.tap(find.text('INFO & UPDATES'));
+    await tester.pumpAndSettle();
+
+    // Verify Info & Updates Screen Elements
+    expect(find.text('INFO & UPDATES'), findsOneWidget);
+    expect(find.text('VORD'), findsOneWidget);
+    expect(find.text('v${UpdateService.currentVersion}'), findsOneWidget);
+    expect(find.text(UpdateService.repoOwner), findsOneWidget);
+    expect(find.text('github.com/${UpdateService.repoOwner}/${UpdateService.repoName}'), findsOneWidget);
+
+    // Verify Update Channel selection
+    expect(find.text('OFFICIAL RELEASE'), findsOneWidget);
+    expect(find.text('COMMIT BUILDS'), findsOneWidget);
+
+    // Default release channel has no data loss danger warning
+    expect(find.text('DANGER: HIGH DATA LOSS RISK'), findsNothing);
+
+    // Switch to Commit Builds channel
+    await tester.tap(find.text('COMMIT BUILDS'));
+    await tester.pumpAndSettle();
+
+    // Verify prominent warning that commit-wise updates carry huge risk of losing every data
+    expect(find.text('DANGER: HIGH DATA LOSS RISK'), findsOneWidget);
+    expect(
+      find.textContaining('Commit-wise updates carry a huge risk of losing every data'),
+      findsOneWidget,
+    );
+
+    // Test check update flow with mock
+    UpdateService.mockCheckHandler = (channel) async {
+      return const UpdateInfo(
+        version: '0.2.0',
+        title: 'Release v0.2.0',
+        notes: 'Tactile tape performance optimizations.',
+        hasApk: true,
+        isNewer: true,
+        channel: UpdateChannel.release,
+        downloadUrl: 'https://example.com/app-release.apk',
+      );
+    };
+
+    // Switch back to release and check updates
+    await tester.tap(find.text('OFFICIAL RELEASE'));
+    await tester.pumpAndSettle();
+    expect(find.text('DANGER: HIGH DATA LOSS RISK'), findsNothing);
+
+    await tester.tap(find.text('CHECK FOR UPDATES'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('AVAILABLE: v0.2.0'), findsOneWidget);
+    expect(find.text('DOWNLOAD APK UPDATE'), findsOneWidget);
+
+    // Back to main deck
+    await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.text('START'), findsOneWidget);
+  });
+
+  test('UpdateService manages update channels and channel persistence', () async {
+    expect(await UpdateService.getUpdateChannel(), UpdateChannel.release);
+    await UpdateService.setUpdateChannel(UpdateChannel.commit);
+    expect(await UpdateService.getUpdateChannel(), UpdateChannel.commit);
+    await UpdateService.setUpdateChannel(UpdateChannel.release);
+    expect(await UpdateService.getUpdateChannel(), UpdateChannel.release);
   });
 
   test('SessionService exports and imports backup archives cleanly', () async {
