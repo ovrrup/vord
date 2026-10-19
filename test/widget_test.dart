@@ -236,16 +236,22 @@ void main() {
     expect(find.text('github.com/${UpdateService.repoOwner}/${UpdateService.repoName}'), findsOneWidget);
 
     // Test Interactive Copy Action
+    await tester.ensureVisible(find.text('COPY'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('COPY'));
     await tester.pump();
     expect(find.text('OWNER COPIED'), findsOneWidget);
 
     // Test Hardware Telemetry Accordion
+    await tester.ensureVisible(find.text('HARDWARE TELEMETRY & SPECS'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('HARDWARE TELEMETRY & SPECS'));
     await tester.pumpAndSettle();
     expect(find.textContaining('100% OFFLINE-FIRST'), findsOneWidget);
 
     // Verify Update Channel selection
+    await tester.ensureVisible(find.text('OFFICIAL RELEASE'));
+    await tester.pumpAndSettle();
     expect(find.text('OFFICIAL RELEASE'), findsOneWidget);
     expect(find.text('COMMIT BUILDS'), findsOneWidget);
 
@@ -253,6 +259,8 @@ void main() {
     expect(find.text('DANGER: HIGH DATA LOSS RISK'), findsNothing);
 
     // Switch to Commit Builds channel
+    await tester.ensureVisible(find.text('COMMIT BUILDS'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('COMMIT BUILDS'));
     await tester.pumpAndSettle();
 
