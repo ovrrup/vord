@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'src/screens/timer_screen.dart';
 import 'src/services/app_settings_service.dart';
 import 'src/services/behaviour_service.dart';

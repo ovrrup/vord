@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/session_service.dart';
-import '../services/sound_service.dart';
 import '../services/update_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/physical_matte_controls.dart';
@@ -719,10 +718,10 @@ class _InfoUpdatesScreenState extends State<InfoUpdatesScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.star_rounded,
                               size: 15,
-                              color: const Color(0xFFE5A93C),
+                              color: Color(0xFFE5A93C),
                             ),
                             const SizedBox(width: 6),
                             Text(
@@ -915,15 +914,15 @@ class _InfoUpdatesScreenState extends State<InfoUpdatesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                const Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.warning_amber_rounded,
                       size: 18,
                       color: Color(0xFFE5534B),
                     ),
-                    const SizedBox(width: 8),
-                    const Text(
+                    SizedBox(width: 8),
+                    Text(
                       'DANGER: HIGH DATA LOSS RISK',
                       style: TextStyle(
                         fontSize: 11.5,

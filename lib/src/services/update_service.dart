@@ -281,6 +281,8 @@ class UpdateService {
         }
       } catch (_) {}
 
+      const apkUrl = 'https://github.com/ovrrup/vord/releases/download/nightly/app-release.apk';
+
       final effectiveCommitSha = mockCurrentCommitSha ?? currentCommitSha;
       final effectiveBuildNumber = mockCurrentBuildNumber ?? currentBuildNumber;
       final installedSha = await getInstalledCommitSha();
