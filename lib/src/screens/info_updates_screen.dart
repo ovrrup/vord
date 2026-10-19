@@ -107,7 +107,7 @@ class _InfoUpdatesScreenState extends State<InfoUpdatesScreen> {
     });
 
     try {
-      final info = await UpdateService.checkForUpdates(
+      final info = await UpdateService.checkForUpdate(
         channel: _selectedChannel,
       );
       if (!mounted) return;
@@ -136,7 +136,7 @@ class _InfoUpdatesScreenState extends State<InfoUpdatesScreen> {
 
     try {
       final file = await UpdateService.downloadApk(
-        url,
+        downloadUrl: url,
         onProgress: (received, total) {
           if (mounted) {
             setState(() {
@@ -173,12 +173,10 @@ class _InfoUpdatesScreenState extends State<InfoUpdatesScreen> {
     });
 
     try {
-      final ok = await UpdateService.installApk(_downloadedApk!);
+      final result = await UpdateService.installApk(_downloadedApk!.path);
       if (!mounted) return;
       setState(() {
-        _installStatus = ok
-            ? 'Installer launched.'
-            : 'Install prompt dismissed.';
+        _installStatus = result.message;
       });
     } catch (e) {
       if (!mounted) return;
