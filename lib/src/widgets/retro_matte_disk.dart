@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import '../theme/app_theme.dart';
 
-/// Component 2: Authentic audio cassette tape cartridge housing holding a rotating
-/// matte tape spool disk inside. Features precision cassette shell mechanics:
-/// tactile side grip ribs, recessed spool observation well, magnetic tape path,
-/// turnaround guide rollers, lower trapezoidal tape-head bay with capstan holes,
-/// 4 flush corner assembly bolts, and a top-right sharp 4-segment milestone light bar
-/// in a single contiguous row without spacing.
+/// Component 2: A minimal, sleek squircle box housing a rotating matte spool disk
+/// recessed deeply inside a CNC-machined circular chamber aperture.
+/// Strictly contains only 3 elements:
+/// 1. Precision machined flush corner assembly bolts
+/// 2. The rotating matte tape spool disk (sunken inside the chamber well)
+/// 3. The sharp 4-segment milestone light bar in one row without spacing on the top-right.
 class RetroMatteDisk extends StatefulWidget {
   final int elapsedSeconds;
   final bool isRunning;
@@ -116,19 +116,19 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Balanced cassette cartridge dimensions that fill the available center space
         final availableSize = math.min(constraints.maxWidth, constraints.maxHeight);
         final boxSize = math.min(availableSize * 0.96, 360.0);
-        final diskDiameter = boxSize * 0.68;
+        final apertureRadius = boxSize * 0.365;
+        final diskDiameter = apertureRadius * 2 - 10.0;
 
         return Container(
           width: boxSize,
           height: boxSize,
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF15181C) : const Color(0xFFF4F6F9),
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(28),
             border: Border.all(
-              color: isDark ? const Color(0xFF282D36) : const Color(0xFFD2D8E0),
+              color: isDark ? const Color(0xFF262C34) : const Color(0xFFD3D9E2),
               width: 1.5,
             ),
             boxShadow: [
@@ -147,33 +147,21 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
           ),
           child: Stack(
             children: [
-              // 1. Physical Cassette Shell Anatomy:
-              // Side grip ribs, recessed observation well, tape ribbon path,
-              // turnaround idler guide rollers, and lower trapezoidal tape-head bay
+              // 1. Recessed Chamber Floor (Deep sunken base behind the disk)
               Positioned.fill(
                 child: CustomPaint(
-                  painter: _CassetteShellPainter(
+                  painter: _ChassisFloorPainter(
                     isDark: isDark,
-                    diskRadius: diskDiameter / 2,
+                    apertureRadius: apertureRadius,
                   ),
                 ),
               ),
 
-              // 2. Rotating Matte Tape Spool Disk sitting inside the observation well
+              // 2. Rotating Matte Tape Spool Disk (Sunken inside the chamber well)
               Center(
-                child: Container(
+                child: SizedBox(
                   width: diskDiameter,
                   height: diskDiameter,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: isDark ? const Color(0x60000000) : const Color(0x18000000),
-                        blurRadius: 16,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
                   child: CustomPaint(
                     size: Size(diskDiameter, diskDiameter),
                     painter: _RetroSpoolPainter(
@@ -184,44 +172,58 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
                 ),
               ),
 
-              // 3. Machined Flush Assembly Bolts at the 4 corners of the cassette housing
+              // 3. Chassis Aperture Bezel & Inner Drop Shadow
+              // Overlays the aperture rim and casts a deep directional shadow over the top-left
+              // of the disk beneath, visually locking the disk INSIDE the box cavity
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: _ApertureBezelPainter(
+                      isDark: isDark,
+                      apertureRadius: apertureRadius,
+                    ),
+                  ),
+                ),
+              ),
+
+              // 4. Machined Flush Assembly Bolts at the 4 corners of the chassis plate
               Positioned(
-                top: 13,
-                left: 13,
+                top: 14,
+                left: 14,
                 child: MachinedBolt(
                   slotAngle: 0.65, // ~37°
                   isDark: isDark,
                 ),
               ),
               Positioned(
-                top: 13,
-                right: 13,
+                top: 14,
+                right: 14,
                 child: MachinedBolt(
                   slotAngle: 1.95, // ~112°
                   isDark: isDark,
                 ),
               ),
               Positioned(
-                bottom: 13,
-                left: 13,
+                bottom: 14,
+                left: 14,
                 child: MachinedBolt(
                   slotAngle: 1.12, // ~64°
                   isDark: isDark,
                 ),
               ),
               Positioned(
-                bottom: 13,
-                right: 13,
+                bottom: 14,
+                right: 14,
                 child: MachinedBolt(
                   slotAngle: 2.58, // ~148°
                   isDark: isDark,
                 ),
               ),
 
-              // 4. Top-Right Sharp 4-Segment Milestone Light Bar in One Row Without Spacing
+              // 5. Top-Right Sharp 4-Segment Milestone Light Bar in One Row Without Spacing
               Positioned(
-                top: 13,
-                right: 34,
+                top: 14,
+                right: 36,
                 child: TopRightInfoPanel(
                   elapsedSeconds: widget.elapsedSeconds,
                   isFocusMode: widget.isFocusMode,
@@ -239,202 +241,106 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
   }
 }
 
-/// Precision-drawn cassette shell anatomy.
-class _CassetteShellPainter extends CustomPainter {
+/// Paints the sunken floor of the recessed chamber well behind the rotating spool disk.
+class _ChassisFloorPainter extends CustomPainter {
   final bool isDark;
-  final double diskRadius;
+  final double apertureRadius;
 
-  const _CassetteShellPainter({
+  const _ChassisFloorPainter({
     required this.isDark,
-    required this.diskRadius,
+    required this.apertureRadius,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final center = Offset(w / 2, h / 2);
+    final center = Offset(size.width / 2, size.height / 2);
 
-    // 1. Inset Outer Chamfer Line around cassette shell
-    final chamferPaint = Paint()
-      ..color = isDark ? const Color(0xFF222730) : const Color(0xFFDDE3EB)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-    final chamferRRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(3.5, 3.5, w - 7.0, h - 7.0),
-      const Radius.circular(22),
-    );
-    canvas.drawRRect(chamferRRect, chamferPaint);
-
-    // 2. Tactile Side Grip Ribs (5 recessed horizontal serration lines on left and right)
-    final ribDarkColor = isDark ? const Color(0xFF101317) : const Color(0xFFCAD1DA);
-    final ribLightColor = isDark ? const Color(0xFF262C36) : const Color(0xFFFFFFFF);
-    final ribDarkPaint = Paint()
-      ..color = ribDarkColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2;
-    final ribLightPaint = Paint()
-      ..color = ribLightColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-
-    const ribCount = 5;
-    final ribStartY = h * 0.38;
-    const ribSpacing = 7.0;
-    const ribLength = 11.0;
-
-    for (int i = 0; i < ribCount; i++) {
-      final y = ribStartY + i * ribSpacing;
-      // Left side grip ribs
-      canvas.drawLine(Offset(4.5, y), Offset(4.5 + ribLength, y), ribDarkPaint);
-      canvas.drawLine(Offset(4.5, y + 1.2), Offset(4.5 + ribLength, y + 1.2), ribLightPaint);
-
-      // Right side grip ribs
-      canvas.drawLine(Offset(w - 4.5 - ribLength, y), Offset(w - 4.5, y), ribDarkPaint);
-      canvas.drawLine(Offset(w - 4.5 - ribLength, y + 1.2), Offset(w - 4.5, y + 1.2), ribLightPaint);
-    }
-
-    // 3. Central Observation Well (Recessed cavity where the spool disk rotates)
-    final wellRadius = diskRadius + 4.5;
-    final wellFill = Paint()
-      ..color = isDark ? const Color(0xFF101215) : const Color(0xFFE8EDF2)
+    // Deep recessed chamber floor (noticeably darker than front chassis face)
+    final floorColor = isDark ? const Color(0xFF0C0E11) : const Color(0xFFDCE2E9);
+    final floorPaint = Paint()
+      ..color = floorColor
       ..style = PaintingStyle.fill;
-    final wellBorder = Paint()
-      ..color = isDark ? const Color(0xFF202630) : const Color(0xFFD0D7E1)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    canvas.drawCircle(center, wellRadius, wellFill);
-    canvas.drawCircle(center, wellRadius, wellBorder);
+    canvas.drawCircle(center, apertureRadius, floorPaint);
 
-    // Inner drop shadow rim for optical mechanical depth inside the cassette cavity
-    final innerShadow = Paint()
-      ..color = isDark ? const Color(0x60000000) : const Color(0x18000000)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0;
-    canvas.drawCircle(center, wellRadius - 1.5, innerShadow);
-
-    // Tape Pack Calibration Scale (5 subtle index tick marks at left and right of the observation well)
-    final tickPaint = Paint()
-      ..color = isDark ? const Color(0x40FFFFFF) : const Color(0x35000000)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-    for (int i = -2; i <= 2; i++) {
-      final tickY = center.dy + i * 10.0;
-      // Left calibration ticks
-      canvas.drawLine(Offset(center.dx - wellRadius + 2, tickY), Offset(center.dx - wellRadius + 7, tickY), tickPaint);
-      // Right calibration ticks
-      canvas.drawLine(Offset(center.dx + wellRadius - 7, tickY), Offset(center.dx + wellRadius - 2, tickY), tickPaint);
-    }
-
-    // 4. Magnetic Tape Ribbon & Lower Turnaround Guide Rollers
-    final leftRollerCenter = Offset(w * 0.19, h * 0.825);
-    final rightRollerCenter = Offset(w * 0.81, h * 0.825);
-
-    // Magnetic oxide tape path ribbon
-    final tapePaint = Paint()
-      ..color = isDark ? const Color(0xFF0B0D0F) : const Color(0xFF24282D)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0
-      ..strokeCap = StrokeCap.round;
-
-    // Horizontal bottom tape span across rollers
-    canvas.drawLine(leftRollerCenter, rightRollerCenter, tapePaint);
-
-    // Left diagonal tape feed up to spool
-    final leftTangentPoint = Offset(center.dx - diskRadius * 0.75, center.dy + diskRadius * 0.65);
-    canvas.drawLine(leftRollerCenter, leftTangentPoint, tapePaint);
-
-    // Right diagonal tape feed up to spool
-    final rightTangentPoint = Offset(center.dx + diskRadius * 0.75, center.dy + diskRadius * 0.65);
-    canvas.drawLine(rightRollerCenter, rightTangentPoint, tapePaint);
-
-    // Turnaround Guide Rollers (Concentric precision idler pulleys)
-    _drawGuideRoller(canvas, leftRollerCenter, 7.5, isDark);
-    _drawGuideRoller(canvas, rightRollerCenter, 7.5, isDark);
-
-    // 5. Trapezoidal Lower Tape-Head Bay
-    final bayTopY = h * 0.855;
-    final bayBottomY = h - 3.5;
-    final halfTopW = (w * 0.58) / 2;
-    final halfBottomW = (w * 0.46) / 2;
-
-    final headBayPath = Path()
-      ..moveTo(center.dx - halfTopW, bayTopY)
-      ..lineTo(center.dx + halfTopW, bayTopY)
-      ..lineTo(center.dx + halfBottomW, bayBottomY)
-      ..lineTo(center.dx - halfBottomW, bayBottomY)
-      ..close();
-
-    final bayFill = Paint()
-      ..color = isDark ? const Color(0xFF131518) : const Color(0xFFEDF1F6)
-      ..style = PaintingStyle.fill;
-    final bayBorder = Paint()
-      ..color = isDark ? const Color(0xFF242A33) : const Color(0xFFCAD2DC)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2;
-
-    canvas.drawPath(headBayPath, bayFill);
-    canvas.drawPath(headBayPath, bayBorder);
-
-    // Two Capstan Shaft Clearance Holes inside the head bay
-    final leftCapstanCenter = Offset(center.dx - w * 0.15, h * 0.905);
-    final rightCapstanCenter = Offset(center.dx + w * 0.15, h * 0.905);
-    _drawCapstanHole(canvas, leftCapstanCenter, 3.2, isDark);
-    _drawCapstanHole(canvas, rightCapstanCenter, 3.2, isDark);
-
-    // Center Playhead Window Notch
-    final headNotchRect = Rect.fromCenter(
-      center: Offset(center.dx, h * 0.905),
-      width: 14.0,
-      height: 7.0,
-    );
-    final notchPaint = Paint()
-      ..color = isDark ? const Color(0xFF090A0D) : const Color(0xFFD6DCE4)
-      ..style = PaintingStyle.fill;
-    canvas.drawRect(headNotchRect, notchPaint);
-  }
-
-  void _drawGuideRoller(Canvas canvas, Offset center, double outerRadius, bool isDark) {
-    // Outer flanged guide collar
-    final flangePaint = Paint()
-      ..color = isDark ? const Color(0xFF282E37) : const Color(0xFFCCD3DD)
-      ..style = PaintingStyle.fill;
-    final flangeBorder = Paint()
-      ..color = isDark ? const Color(0xFF38404D) : const Color(0xFFB5BDC8)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-    canvas.drawCircle(center, outerRadius, flangePaint);
-    canvas.drawCircle(center, outerRadius, flangeBorder);
-
-    // Inner tape race groove
-    final racePaint = Paint()
-      ..color = isDark ? const Color(0xFF14171A) : const Color(0xFFE2E7ED)
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, outerRadius * 0.65, racePaint);
-
-    // Polished stainless steel center axle pin
-    final pinPaint = Paint()
-      ..color = isDark ? const Color(0xFF8B949E) : const Color(0xFF57606A)
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, outerRadius * 0.28, pinPaint);
-  }
-
-  void _drawCapstanHole(Canvas canvas, Offset center, double radius, bool isDark) {
-    final holePaint = Paint()
-      ..color = isDark ? const Color(0xFF090A0C) : const Color(0xFF1E2226)
-      ..style = PaintingStyle.fill;
-    final collarPaint = Paint()
-      ..color = isDark ? const Color(0xFF2B323C) : const Color(0xFFBCC4CE)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-
-    canvas.drawCircle(center, radius, holePaint);
-    canvas.drawCircle(center, radius + 1.5, collarPaint);
+    // Ambient occlusion depth gradient around floor boundary
+    final floorOcclusion = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          Colors.transparent,
+          isDark ? const Color(0x60000000) : const Color(0x20000000),
+        ],
+        stops: const [0.82, 1.0],
+      ).createShader(Rect.fromCircle(center: center, radius: apertureRadius));
+    canvas.drawCircle(center, apertureRadius, floorOcclusion);
   }
 
   @override
-  bool shouldRepaint(covariant _CassetteShellPainter oldDelegate) {
-    return oldDelegate.isDark != isDark || oldDelegate.diskRadius != diskRadius;
+  bool shouldRepaint(covariant _ChassisFloorPainter oldDelegate) {
+    return oldDelegate.isDark != isDark || oldDelegate.apertureRadius != apertureRadius;
+  }
+}
+
+/// Paints the front chassis plate's cut aperture rim:
+/// A deep directional inner shadow falling from the top-left rim down over the disk,
+/// and a crisp metallic catchlight along the bottom-right rim, creating authentic optical depth.
+class _ApertureBezelPainter extends CustomPainter {
+  final bool isDark;
+  final double apertureRadius;
+
+  const _ApertureBezelPainter({
+    required this.isDark,
+    required this.apertureRadius,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final apertureRect = Rect.fromCircle(center: center, radius: apertureRadius);
+
+    // 1. Deep directional inner shadow cast from top-left chassis rim over the cavity and disk
+    canvas.save();
+    canvas.clipPath(Path()..addOval(apertureRect));
+
+    final shadowShader = LinearGradient(
+      begin: const Alignment(-0.85, -0.85),
+      end: const Alignment(0.15, 0.15),
+      colors: [
+        isDark ? const Color(0xCC000000) : const Color(0x45000000),
+        isDark ? const Color(0x66000000) : const Color(0x20000000),
+        Colors.transparent,
+      ],
+      stops: const [0.0, 0.22, 0.45],
+    ).createShader(apertureRect);
+
+    canvas.drawRect(apertureRect, Paint()..shader = shadowShader);
+    canvas.restore();
+
+    // 2. Precision milled rim border
+    final rimBorderPaint = Paint()
+      ..color = isDark ? const Color(0xFF262C35) : const Color(0xFFCAD1DA)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    canvas.drawCircle(center, apertureRadius, rimBorderPaint);
+
+    // 3. Specular rim catchlight along the bottom-right inner wall of the cut hole
+    final highlightPaint = Paint()
+      ..color = isDark ? const Color(0x2CFFFFFF) : const Color(0x95FFFFFF)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: apertureRadius - 0.6),
+      0.0, // from right
+      math.pi * 0.60, // across bottom-right
+      false,
+      highlightPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _ApertureBezelPainter oldDelegate) {
+    return oldDelegate.isDark != isDark || oldDelegate.apertureRadius != apertureRadius;
   }
 }
 
@@ -788,15 +694,15 @@ class _RetroSpoolPainter extends CustomPainter {
     final outerRimPaint = Paint()
       ..color = isDark ? const Color(0xFF2C323B) : const Color(0xFFCAD1DA)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5;
+      ..strokeWidth = 2.0;
     canvas.drawCircle(center, radius - 2, outerRimPaint);
 
-    // Inner bevel shadow for recessed physical depth
+    // Subtle inner bevel shadow for recessed physical depth
     final innerBevelPaint = Paint()
       ..color = isDark ? const Color(0x35000000) : const Color(0x16000000)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.5;
-    canvas.drawCircle(center, radius - 5, innerBevelPaint);
+      ..strokeWidth = 2.5;
+    canvas.drawCircle(center, radius - 4.5, innerBevelPaint);
   }
 
   void _drawSpoolMechanics(Canvas canvas, double radius) {
@@ -806,18 +712,18 @@ class _RetroSpoolPainter extends CustomPainter {
     final holeRadius = radius * 0.19;
 
     final cutoutFillPaint = Paint()
-      ..color = isDark ? const Color(0xFF0A0C0E) : const Color(0xFFDEE3E9)
+      ..color = isDark ? const Color(0xFF090B0D) : const Color(0xFFD6DCE3)
       ..style = PaintingStyle.fill;
 
     final cutoutShadowPaint = Paint()
       ..color = isDark ? const Color(0x60000000) : const Color(0x30000000)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5;
+      ..strokeWidth = 2.0;
 
     final cutoutRimPaint = Paint()
       ..color = isDark ? const Color(0x40FFFFFF) : const Color(0x30000000)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2;
+      ..strokeWidth = 1.0;
 
     for (int i = 0; i < holeCount; i++) {
       final angle = (i * 2 * math.pi) / holeCount;
@@ -828,7 +734,7 @@ class _RetroSpoolPainter extends CustomPainter {
 
       // Recessed interior through the spool face
       canvas.drawCircle(holeCenter, holeRadius, cutoutFillPaint);
-      canvas.drawCircle(holeCenter, holeRadius - 1.2, cutoutShadowPaint);
+      canvas.drawCircle(holeCenter, holeRadius - 1.0, cutoutShadowPaint);
       canvas.drawCircle(holeCenter, holeRadius, cutoutRimPaint);
     }
 
@@ -836,7 +742,7 @@ class _RetroSpoolPainter extends CustomPainter {
     final spokePaint = Paint()
       ..color = isDark ? const Color(0x38FFFFFF) : const Color(0x30000000)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.8
+      ..strokeWidth = 1.6
       ..strokeCap = StrokeCap.square;
 
     for (int i = 0; i < 3; i++) {
@@ -850,19 +756,19 @@ class _RetroSpoolPainter extends CustomPainter {
     final tickPaint = Paint()
       ..color = isDark ? const Color(0x40FFFFFF) : const Color(0x2A000000)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2;
+      ..strokeWidth = 1.0;
 
     final majorTickPaint = Paint()
       ..color = isDark ? const Color(0x80FFFFFF) : const Color(0x55000000)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
+      ..strokeWidth = 1.8;
 
     const tickCount = 60;
     for (int i = 0; i < tickCount; i++) {
       final isMajor = i % 5 == 0;
       final tickAngle = (i * 2 * math.pi) / tickCount;
-      final outerR = radius - 6;
-      final innerR = isMajor ? radius - 15 : radius - 11;
+      final outerR = radius - 5;
+      final innerR = isMajor ? radius - 13 : radius - 10;
 
       final p1 = Offset(innerR * math.cos(tickAngle), innerR * math.sin(tickAngle));
       final p2 = Offset(outerR * math.cos(tickAngle), outerR * math.sin(tickAngle));
@@ -872,19 +778,19 @@ class _RetroSpoolPainter extends CustomPainter {
     // Solid Physical Center Hub
     final hubRadius = radius * 0.24;
     final hubPaint = Paint()
-      ..color = isDark ? const Color(0xFF181B20) : const Color(0xFFE6EBF0)
+      ..color = isDark ? const Color(0xFF16191E) : const Color(0xFFE4E9EE)
       ..style = PaintingStyle.fill;
     final hubBorderPaint = Paint()
       ..color = isDark ? const Color(0xFF38404B) : const Color(0xFFA5ADB8)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
+      ..strokeWidth = 1.8;
 
     canvas.drawCircle(Offset.zero, hubRadius, hubPaint);
     canvas.drawCircle(Offset.zero, hubRadius, hubBorderPaint);
 
     // 3 Solid Drive Splines / Teeth
     final splinePaint = Paint()
-      ..color = isDark ? const Color(0xFF0F1114) : const Color(0xFF282D33)
+      ..color = isDark ? const Color(0xFF0D0F12) : const Color(0xFF282D33)
       ..style = PaintingStyle.fill;
 
     for (int i = 0; i < 3; i++) {
@@ -903,7 +809,7 @@ class _RetroSpoolPainter extends CustomPainter {
     // Central Spindle Axle Hole
     final spindleRadius = radius * 0.075;
     final spindleFill = Paint()
-      ..color = isDark ? const Color(0xFF070809) : const Color(0xFF1E2226)
+      ..color = isDark ? const Color(0xFF060708) : const Color(0xFF1E2226)
       ..style = PaintingStyle.fill;
     final spindleBorder = Paint()
       ..color = isDark ? const Color(0xFF4A5462) : const Color(0xFF8B949E)
