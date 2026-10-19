@@ -54,7 +54,9 @@ class AppSettingsService extends ChangeNotifier {
 
     try {
       try {
-        final docsDir = await getApplicationDocumentsDirectory();
+        final docsDir = await getApplicationDocumentsDirectory().timeout(
+          const Duration(milliseconds: 50),
+        );
         _settingsFile = File('${docsDir.path}/$_settingsFileName');
         _backupFile = File('${docsDir.path}/$_settingsBackupFileName');
       } catch (_) {
@@ -270,9 +272,12 @@ class AppSettingsService extends ChangeNotifier {
     previousChain.then((_) async {
       try {
         await _performAtomicDiskWrite();
+      } catch (_) {
       } finally {
         completer.complete();
       }
+    }).catchError((_) {
+      completer.complete();
     });
 
     return completer.future;

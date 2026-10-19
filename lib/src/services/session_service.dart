@@ -41,7 +41,9 @@ class SessionService extends ChangeNotifier {
     try {
       // 1. Resolve local documents directory for atomic disk file
       try {
-        final docsDir = await getApplicationDocumentsDirectory();
+        final docsDir = await getApplicationDocumentsDirectory().timeout(
+          const Duration(milliseconds: 50),
+        );
         _databaseFile = File('${docsDir.path}/$_dbFileName');
         _backupFile = File('${docsDir.path}/$_backupFileName');
       } catch (_) {

@@ -14,6 +14,8 @@ import 'package:vord/src/widgets/physical_matte_controls.dart';
 import 'package:vord/src/widgets/retro_matte_disk.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     SoundService.enableAudio =
@@ -24,8 +26,8 @@ void main() {
     UpdateService.mockCurrentBuildNumber = null;
     AppSettingsService.instance.setMockValues(
       themeMode: 'light',
-      soundEnabled: false,
-      hapticEnabled: false,
+      soundEnabled: true,
+      hapticEnabled: true,
       hideStatusBar: true,
       hideNavBar: false,
       showTime: false,
