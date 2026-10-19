@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/session_mode.dart';
+import '../services/behaviour_service.dart';
 import '../services/session_service.dart';
 import '../services/sound_service.dart';
 import '../widgets/motivation_banner.dart';
@@ -12,12 +13,14 @@ class TimerScreen extends StatefulWidget {
   final bool animateBackground;
   final ThemeMode currentThemeMode;
   final ValueChanged<ThemeMode> onThemeChanged;
+  final BehaviourService? behaviourService;
 
   const TimerScreen({
     super.key,
     this.animateBackground = true,
     this.currentThemeMode = ThemeMode.light,
     required this.onThemeChanged,
+    this.behaviourService,
   });
 
   @override
@@ -36,17 +39,29 @@ class _TimerScreenState extends State<TimerScreen> {
 
   // Dynamic self-competition milestones
   int _baselineSeconds = 1200; // Default 20m baseline
-  int _extra3Seconds = 180;    // Stage 3 extra time (120-240s)
-  int _extra4Seconds = 240;    // Stage 4 extra time (180-360s)
+  int _extra3Seconds = 180; // Stage 3 extra time (120-240s)
+  int _extra4Seconds = 240; // Stage 4 extra time (180-360s)
+
+  BehaviourService get _behaviourService =>
+      widget.behaviourService ?? BehaviourService.instance;
 
   @override
   void initState() {
     super.initState();
     SoundService.init();
+    _behaviourService.addListener(_onBehaviourChanged);
+    _behaviourService.applySystemUiMode();
+  }
+
+  void _onBehaviourChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
   void dispose() {
+    _behaviourService.removeListener(_onBehaviourChanged);
     _ticker?.cancel();
     _stopwatch.stop();
     _sessionService.dispose();
@@ -61,8 +76,10 @@ class _TimerScreenState extends State<TimerScreen> {
 
     // Compute baseline and randomized extensions for this session
     _baselineSeconds = _sessionService.lastFocusDurationSeconds;
-    _extra3Seconds = 120 + _random.nextInt(121); // 120 to 240 seconds (2 to 4 min)
-    _extra4Seconds = 180 + _random.nextInt(181); // 180 to 360 seconds (3 to 6 min)
+    _extra3Seconds =
+        120 + _random.nextInt(121); // 120 to 240 seconds (2 to 4 min)
+    _extra4Seconds =
+        180 + _random.nextInt(181); // 180 to 360 seconds (3 to 6 min)
 
     setState(() {
       _elapsedSeconds = 0;
@@ -89,7 +106,10 @@ class _TimerScreenState extends State<TimerScreen> {
       if (_isFocusMode) {
         _sessionService.recordSession(SessionModeType.focus, _elapsedSeconds);
       } else {
-        _sessionService.recordSession(SessionModeType.shortBreak, _elapsedSeconds);
+        _sessionService.recordSession(
+          SessionModeType.shortBreak,
+          _elapsedSeconds,
+        );
       }
     }
 
@@ -116,7 +136,10 @@ class _TimerScreenState extends State<TimerScreen> {
         if (_isFocusMode) {
           _sessionService.recordSession(SessionModeType.focus, _elapsedSeconds);
         } else {
-          _sessionService.recordSession(SessionModeType.shortBreak, _elapsedSeconds);
+          _sessionService.recordSession(
+            SessionModeType.shortBreak,
+            _elapsedSeconds,
+          );
         }
       }
       _ticker?.cancel();
@@ -170,6 +193,7 @@ class _TimerScreenState extends State<TimerScreen> {
                     baselineSeconds: _baselineSeconds,
                     extra3Seconds: _extra3Seconds,
                     extra4Seconds: _extra4Seconds,
+                    showTime: _behaviourService.showTime,
                   ),
                 ),
               ),

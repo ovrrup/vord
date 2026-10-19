@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../screens/behaviour_screen.dart';
 import '../screens/data_backup_screen.dart';
 import '../screens/history_screen.dart';
 import '../screens/info_updates_screen.dart';
@@ -61,12 +62,20 @@ class _PhysicalMatteButtonState extends State<PhysicalMatteButton> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final defaultBg = isDark ? const Color(0xFF1B1E23) : const Color(0xFFF0F3F7);
-    final borderCol = widget.borderColor ?? (isDark ? const Color(0xFF2C323B) : const Color(0xFFCAD1D9));
+    final defaultBg = isDark
+        ? const Color(0xFF1B1E23)
+        : const Color(0xFFF0F3F7);
+    final borderCol =
+        widget.borderColor ??
+        (isDark ? const Color(0xFF2C323B) : const Color(0xFFCAD1D9));
     final bg = widget.backgroundColor ?? defaultBg;
 
-    final shadowHard = isDark ? const Color(0xFF090A0C) : const Color(0xFFA8B1BB);
-    final shadowAmbient = isDark ? const Color(0x66000000) : const Color(0x22000000);
+    final shadowHard = isDark
+        ? const Color(0xFF090A0C)
+        : const Color(0xFFA8B1BB);
+    final shadowAmbient = isDark
+        ? const Color(0x66000000)
+        : const Color(0x22000000);
 
     return GestureDetector(
       onTapDown: _handleTapDown,
@@ -87,10 +96,7 @@ class _PhysicalMatteButtonState extends State<PhysicalMatteButton> {
           borderRadius: widget.borderRadius > 0
               ? BorderRadius.circular(widget.borderRadius)
               : BorderRadius.zero,
-          border: Border.all(
-            color: borderCol,
-            width: 1.5,
-          ),
+          border: Border.all(color: borderCol, width: 1.5),
           boxShadow: [
             // Solid physical extrusion edge
             BoxShadow(
@@ -164,10 +170,14 @@ class BottomControls extends StatelessWidget {
               borderRadius: 0.0,
               backgroundColor: isRunning
                   ? (isDark ? const Color(0xFF1B271F) : const Color(0xFFE9F5ED))
-                  : (isDark ? const Color(0xFF1C2025) : const Color(0xFFF4F6F9)),
+                  : (isDark
+                        ? const Color(0xFF1C2025)
+                        : const Color(0xFFF4F6F9)),
               borderColor: isRunning
                   ? (isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57))
-                  : (isDark ? const Color(0xFF2E353F) : const Color(0xFFCFD6DE)),
+                  : (isDark
+                        ? const Color(0xFF2E353F)
+                        : const Color(0xFFCFD6DE)),
               child: Stack(
                 children: [
                   // Discrete solid active indicator bar along the top edge
@@ -240,11 +250,11 @@ class BottomControls extends StatelessWidget {
                             height: 6,
                             color: isFocusMode
                                 ? (isDark
-                                    ? const Color(0xFF3FA36C)
-                                    : const Color(0xFF2E8B57))
+                                      ? const Color(0xFF3FA36C)
+                                      : const Color(0xFF2E8B57))
                                 : (isDark
-                                    ? const Color(0xFF8B949E)
-                                    : const Color(0xFF656D76)),
+                                      ? const Color(0xFF8B949E)
+                                      : const Color(0xFF656D76)),
                           ),
                           const SizedBox(width: 6),
                           Text(
@@ -365,8 +375,12 @@ class _OptionsSheetState extends State<OptionsSheet> {
 
     final bg = isDark ? AppTheme.darkBackground : AppTheme.lightBackground;
     final borderCol = isDark ? AppTheme.darkBorder : AppTheme.lightBorder;
-    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
-    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+    final textPrimary = isDark
+        ? AppTheme.darkTextPrimary
+        : AppTheme.lightTextPrimary;
+    final textSecondary = isDark
+        ? AppTheme.darkTextSecondary
+        : AppTheme.lightTextSecondary;
 
     return Container(
       constraints: BoxConstraints(
@@ -375,10 +389,7 @@ class _OptionsSheetState extends State<OptionsSheet> {
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       decoration: BoxDecoration(
         color: bg,
-        border: Border.all(
-          color: borderCol,
-          width: 1.5,
-        ),
+        border: Border.all(color: borderCol, width: 1.5),
       ),
       child: SafeArea(
         top: false,
@@ -392,7 +403,9 @@ class _OptionsSheetState extends State<OptionsSheet> {
                 child: Container(
                   width: 36,
                   height: 3,
-                  color: isDark ? const Color(0xFF404854) : const Color(0xFFC0C7D0),
+                  color: isDark
+                      ? const Color(0xFF404854)
+                      : const Color(0xFFC0C7D0),
                 ),
               ),
               const SizedBox(height: 16),
@@ -416,18 +429,24 @@ class _OptionsSheetState extends State<OptionsSheet> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => HistoryScreen(sessionService: widget.sessionService),
+                      builder: (context) =>
+                          HistoryScreen(sessionService: widget.sessionService),
                     ),
                   );
                 },
                 borderRadius: 0.0,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 child: Row(
                   children: [
                     Icon(
                       Icons.history_rounded,
                       size: 20,
-                      color: isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57),
+                      color: isDark
+                          ? const Color(0xFF3FA36C)
+                          : const Color(0xFF2E8B57),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -459,18 +478,25 @@ class _OptionsSheetState extends State<OptionsSheet> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => DataBackupScreen(sessionService: widget.sessionService),
+                      builder: (context) => DataBackupScreen(
+                        sessionService: widget.sessionService,
+                      ),
                     ),
                   );
                 },
                 borderRadius: 0.0,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 child: Row(
                   children: [
                     Icon(
                       Icons.storage_rounded,
                       size: 20,
-                      color: isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57),
+                      color: isDark
+                          ? const Color(0xFF3FA36C)
+                          : const Color(0xFF2E8B57),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -514,23 +540,78 @@ class _OptionsSheetState extends State<OptionsSheet> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => InfoUpdatesScreen(sessionService: widget.sessionService),
+                      builder: (context) => InfoUpdatesScreen(
+                        sessionService: widget.sessionService,
+                      ),
                     ),
                   );
                 },
                 borderRadius: 0.0,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 child: Row(
                   children: [
                     Icon(
                       Icons.info_outline_rounded,
                       size: 20,
-                      color: isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57),
+                      color: isDark
+                          ? const Color(0xFF3FA36C)
+                          : const Color(0xFF2E8B57),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'INFO & UPDATES',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.8,
+                          color: textPrimary,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 20,
+                      color: textSecondary,
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              // Behaviour button
+              PhysicalMatteButton(
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const BehaviourScreen(),
+                    ),
+                  );
+                },
+                borderRadius: 0.0,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.tune_rounded,
+                      size: 20,
+                      color: isDark
+                          ? const Color(0xFF3FA36C)
+                          : const Color(0xFF2E8B57),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'BEHAVIOUR',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
@@ -572,14 +653,21 @@ class _OptionsSheetState extends State<OptionsSheet> {
                         SoundService.setSoundEnabled(next);
                       },
                       borderRadius: 0.0,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
                       child: Row(
                         children: [
                           Icon(
-                            _soundEnabled ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+                            _soundEnabled
+                                ? Icons.volume_up_rounded
+                                : Icons.volume_off_rounded,
                             size: 18,
                             color: _soundEnabled
-                                ? (isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57))
+                                ? (isDark
+                                      ? const Color(0xFF3FA36C)
+                                      : const Color(0xFF2E8B57))
                                 : textSecondary,
                           ),
                           const SizedBox(width: 8),
@@ -600,7 +688,9 @@ class _OptionsSheetState extends State<OptionsSheet> {
                               fontSize: 10.5,
                               fontWeight: FontWeight.w800,
                               color: _soundEnabled
-                                  ? (isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57))
+                                  ? (isDark
+                                        ? const Color(0xFF3FA36C)
+                                        : const Color(0xFF2E8B57))
                                   : textSecondary,
                             ),
                           ),
@@ -617,14 +707,21 @@ class _OptionsSheetState extends State<OptionsSheet> {
                         SoundService.setHapticEnabled(next);
                       },
                       borderRadius: 0.0,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
                       child: Row(
                         children: [
                           Icon(
-                            _hapticEnabled ? Icons.vibration_rounded : Icons.smartphone_rounded,
+                            _hapticEnabled
+                                ? Icons.vibration_rounded
+                                : Icons.smartphone_rounded,
                             size: 18,
                             color: _hapticEnabled
-                                ? (isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57))
+                                ? (isDark
+                                      ? const Color(0xFF3FA36C)
+                                      : const Color(0xFF2E8B57))
                                 : textSecondary,
                           ),
                           const SizedBox(width: 8),
@@ -645,7 +742,9 @@ class _OptionsSheetState extends State<OptionsSheet> {
                               fontSize: 10.5,
                               fontWeight: FontWeight.w800,
                               color: _hapticEnabled
-                                  ? (isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57))
+                                  ? (isDark
+                                        ? const Color(0xFF3FA36C)
+                                        : const Color(0xFF2E8B57))
                                   : textSecondary,
                             ),
                           ),
@@ -716,19 +815,11 @@ class _OptionsSheetState extends State<OptionsSheet> {
       },
       borderRadius: 0.0,
       backgroundColor: isSelected
-          ? (isDark
-              ? const Color(0xFF1B2E24)
-              : const Color(0xFFF2F9F3))
-          : (isDark
-              ? AppTheme.darkSurface
-              : AppTheme.lightSurface),
+          ? (isDark ? const Color(0xFF1B2E24) : const Color(0xFFF2F9F3))
+          : (isDark ? AppTheme.darkSurface : AppTheme.lightSurface),
       borderColor: isSelected
-          ? (isDark
-              ? const Color(0xFF3FA36C)
-              : const Color(0xFF2E8B57))
-          : (isDark
-              ? AppTheme.darkBorder
-              : AppTheme.lightBorder),
+          ? (isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57))
+          : (isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       child: Row(
         children: [
@@ -736,12 +827,10 @@ class _OptionsSheetState extends State<OptionsSheet> {
             icon,
             size: 18,
             color: isSelected
-                ? (isDark
-                    ? const Color(0xFF3FA36C)
-                    : const Color(0xFF2E8B57))
+                ? (isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57))
                 : (isDark
-                    ? AppTheme.darkTextPrimary
-                    : AppTheme.lightTextPrimary),
+                      ? AppTheme.darkTextPrimary
+                      : AppTheme.lightTextPrimary),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -752,11 +841,11 @@ class _OptionsSheetState extends State<OptionsSheet> {
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
                 color: isSelected
                     ? (isDark
-                        ? const Color(0xFF3FA36C)
-                        : const Color(0xFF2E8B57))
+                          ? const Color(0xFF3FA36C)
+                          : const Color(0xFF2E8B57))
                     : (isDark
-                        ? AppTheme.darkTextPrimary
-                        : AppTheme.lightTextPrimary),
+                          ? AppTheme.darkTextPrimary
+                          : AppTheme.lightTextPrimary),
               ),
             ),
           ),
@@ -764,9 +853,7 @@ class _OptionsSheetState extends State<OptionsSheet> {
             Icon(
               Icons.check_circle_rounded,
               size: 18,
-              color: isDark
-                  ? const Color(0xFF3FA36C)
-                  : const Color(0xFF2E8B57),
+              color: isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57),
             ),
         ],
       ),

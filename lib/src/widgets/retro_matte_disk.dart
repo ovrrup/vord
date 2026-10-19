@@ -1,14 +1,16 @@
 import 'dart:math' as math;
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import '../theme/app_theme.dart';
 
 /// Component 2: A minimal, sleek squircle box housing a rotating matte spool disk
 /// recessed deeply inside a CNC-machined circular chamber aperture.
-/// Strictly contains only 3 elements:
+/// Contains:
 /// 1. Precision machined flush corner assembly bolts
 /// 2. The rotating matte tape spool disk (sunken inside the chamber well)
 /// 3. The sharp 4-segment milestone light bar in one row without spacing on the top-right.
+/// 4. Optional 45° tilted time counter on the top-left (enabled via Behaviour Options).
 class RetroMatteDisk extends StatefulWidget {
   final int elapsedSeconds;
   final bool isRunning;
@@ -17,6 +19,7 @@ class RetroMatteDisk extends StatefulWidget {
   final int baselineSeconds;
   final int extra3Seconds;
   final int extra4Seconds;
+  final bool showTime;
 
   const RetroMatteDisk({
     super.key,
@@ -27,6 +30,7 @@ class RetroMatteDisk extends StatefulWidget {
     this.baselineSeconds = 1200,
     this.extra3Seconds = 180,
     this.extra4Seconds = 240,
+    this.showTime = false,
   });
 
   @override
@@ -37,7 +41,8 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
     with SingleTickerProviderStateMixin {
   late final Ticker _ticker;
   double _rotationAngle = 0.0;
-  double _currentVelocity = 0.0; // -1.0 (rest mode reverse) to +1.0 (focus mode forward)
+  double _currentVelocity =
+      0.0; // -1.0 (rest mode reverse) to +1.0 (focus mode forward)
   Duration _lastElapsed = Duration.zero;
 
   @override
@@ -78,9 +83,15 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
     // Physical rotational inertia: motor spin-up acceleration and mechanical braking friction
     double newVelocity = _currentVelocity;
     if (newVelocity < targetVelocity) {
-      newVelocity = math.min(targetVelocity, newVelocity + dt * 1.1); // Acceleration
+      newVelocity = math.min(
+        targetVelocity,
+        newVelocity + dt * 1.1,
+      ); // Acceleration
     } else if (newVelocity > targetVelocity) {
-      newVelocity = math.max(targetVelocity, newVelocity - dt * 1.3); // Deceleration / reverse acceleration
+      newVelocity = math.max(
+        targetVelocity,
+        newVelocity - dt * 1.3,
+      ); // Deceleration / reverse acceleration
     }
 
     if (newVelocity != 0.0 || newVelocity != _currentVelocity) {
@@ -91,7 +102,9 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
 
       setState(() {
         _currentVelocity = newVelocity;
-        double nextAngle = _rotationAngle + dt * baseAngularVelocity * _currentVelocity * flutter;
+        double nextAngle =
+            _rotationAngle +
+            dt * baseAngularVelocity * _currentVelocity * flutter;
         while (nextAngle < 0) {
           nextAngle += 2 * math.pi;
         }
@@ -116,7 +129,10 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final availableSize = math.min(constraints.maxWidth, constraints.maxHeight);
+        final availableSize = math.min(
+          constraints.maxWidth,
+          constraints.maxHeight,
+        );
         final boxSize = math.min(availableSize * 0.96, 360.0);
         final apertureRadius = boxSize * 0.365;
         final diskDiameter = apertureRadius * 2 - 10.0;
@@ -133,13 +149,17 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
             ),
             boxShadow: [
               BoxShadow(
-                color: isDark ? const Color(0x60000000) : const Color(0x18000000),
+                color: isDark
+                    ? const Color(0x60000000)
+                    : const Color(0x18000000),
                 blurRadius: 24,
                 offset: const Offset(0, 12),
                 spreadRadius: -4,
               ),
               BoxShadow(
-                color: isDark ? const Color(0x30000000) : const Color(0x0C000000),
+                color: isDark
+                    ? const Color(0x30000000)
+                    : const Color(0x0C000000),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
@@ -233,6 +253,22 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
                   extra4Seconds: widget.extra4Seconds,
                 ),
               ),
+
+              // 6. Top-Left 45° Tilted Counter Badge (Only rendered when showTime is enabled)
+              if (widget.showTime)
+                Positioned(
+                  top: 18,
+                  left: 36,
+                  child: Transform.rotate(
+                    angle: -math.pi / 4,
+                    child: DeckTimeCounter(
+                      elapsedSeconds: widget.elapsedSeconds,
+                      isDark: isDark,
+                      isFocusMode: widget.isFocusMode,
+                      isRunning: widget.isRunning,
+                    ),
+                  ),
+                ),
             ],
           ),
         );
@@ -256,7 +292,9 @@ class _ChassisFloorPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
 
     // Deep recessed chamber floor (noticeably darker than front chassis face)
-    final floorColor = isDark ? const Color(0xFF0C0E11) : const Color(0xFFDCE2E9);
+    final floorColor = isDark
+        ? const Color(0xFF0C0E11)
+        : const Color(0xFFDCE2E9);
     final floorPaint = Paint()
       ..color = floorColor
       ..style = PaintingStyle.fill;
@@ -276,7 +314,8 @@ class _ChassisFloorPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ChassisFloorPainter oldDelegate) {
-    return oldDelegate.isDark != isDark || oldDelegate.apertureRadius != apertureRadius;
+    return oldDelegate.isDark != isDark ||
+        oldDelegate.apertureRadius != apertureRadius;
   }
 }
 
@@ -295,7 +334,10 @@ class _ApertureBezelPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final apertureRect = Rect.fromCircle(center: center, radius: apertureRadius);
+    final apertureRect = Rect.fromCircle(
+      center: center,
+      radius: apertureRadius,
+    );
 
     // 1. Deep directional inner shadow cast from top-left chassis rim over the cavity and disk
     canvas.save();
@@ -340,7 +382,8 @@ class _ApertureBezelPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ApertureBezelPainter oldDelegate) {
-    return oldDelegate.isDark != isDark || oldDelegate.apertureRadius != apertureRadius;
+    return oldDelegate.isDark != isDark ||
+        oldDelegate.apertureRadius != apertureRadius;
   }
 }
 
@@ -359,10 +402,7 @@ class MachinedBolt extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomPaint(
       size: const Size(14, 14),
-      painter: _MachinedBoltPainter(
-        slotAngle: slotAngle,
-        isDark: isDark,
-      ),
+      painter: _MachinedBoltPainter(slotAngle: slotAngle, isDark: isDark),
     );
   }
 }
@@ -371,10 +411,7 @@ class _MachinedBoltPainter extends CustomPainter {
   final double slotAngle;
   final bool isDark;
 
-  const _MachinedBoltPainter({
-    required this.slotAngle,
-    required this.isDark,
-  });
+  const _MachinedBoltPainter({required this.slotAngle, required this.isDark});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -411,7 +448,11 @@ class _MachinedBoltPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.4
       ..strokeCap = StrokeCap.square;
-    canvas.drawLine(Offset(-radius * 0.52, 0), Offset(radius * 0.52, 0), slotPaint);
+    canvas.drawLine(
+      Offset(-radius * 0.52, 0),
+      Offset(radius * 0.52, 0),
+      slotPaint,
+    );
 
     canvas.restore();
   }
@@ -552,11 +593,7 @@ class StageBoxLight extends StatelessWidget {
           fillColor = AppTheme.darkStage2; // #28593D Muted Moss
           borderColor = const Color(0xFF3FA36C);
           shadows = const [
-            BoxShadow(
-              color: Color(0xA028593D),
-              blurRadius: 6,
-              spreadRadius: 1,
-            ),
+            BoxShadow(color: Color(0xA028593D), blurRadius: 6, spreadRadius: 1),
           ];
           break;
         case 3:
@@ -575,11 +612,7 @@ class StageBoxLight extends StatelessWidget {
           fillColor = const Color(0xFF52D18D); // Luminescent Emerald Surge
           borderColor = const Color(0xFF7EFFBA);
           shadows = const [
-            BoxShadow(
-              color: Color(0xE052D18D),
-              blurRadius: 8,
-              spreadRadius: 2,
-            ),
+            BoxShadow(color: Color(0xE052D18D), blurRadius: 8, spreadRadius: 2),
           ];
           break;
       }
@@ -601,11 +634,7 @@ class StageBoxLight extends StatelessWidget {
           fillColor = AppTheme.lightStage2; // #A8D5BA Soft Sage
           borderColor = const Color(0xFF67B583);
           shadows = const [
-            BoxShadow(
-              color: Color(0x80A8D5BA),
-              blurRadius: 5,
-              spreadRadius: 1,
-            ),
+            BoxShadow(color: Color(0x80A8D5BA), blurRadius: 5, spreadRadius: 1),
           ];
           break;
         case 3:
@@ -624,17 +653,15 @@ class StageBoxLight extends StatelessWidget {
           fillColor = AppTheme.lightStage3; // #2E8B57 Pleasant Forest Green
           borderColor = const Color(0xFF1B633B);
           shadows = const [
-            BoxShadow(
-              color: Color(0xB02E8B57),
-              blurRadius: 7,
-              spreadRadius: 2,
-            ),
+            BoxShadow(color: Color(0xB02E8B57), blurRadius: 7, spreadRadius: 2),
           ];
           break;
       }
     }
 
-    final dividerColor = isDark ? const Color(0xFF222830) : const Color(0xFFCAD1DA);
+    final dividerColor = isDark
+        ? const Color(0xFF222830)
+        : const Color(0xFFCAD1DA);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -645,14 +672,93 @@ class StageBoxLight extends StatelessWidget {
         color: fillColor,
         borderRadius: BorderRadius.zero, // Razor-sharp rectangular segment
         border: Border(
-          top: BorderSide(color: isLit ? borderColor : Colors.transparent, width: 0.8),
-          bottom: BorderSide(color: isLit ? borderColor : Colors.transparent, width: 0.8),
-          left: isFirst ? BorderSide(color: isLit ? borderColor : Colors.transparent, width: 0.8) : BorderSide.none,
+          top: BorderSide(
+            color: isLit ? borderColor : Colors.transparent,
+            width: 0.8,
+          ),
+          bottom: BorderSide(
+            color: isLit ? borderColor : Colors.transparent,
+            width: 0.8,
+          ),
+          left: isFirst
+              ? BorderSide(
+                  color: isLit ? borderColor : Colors.transparent,
+                  width: 0.8,
+                )
+              : BorderSide.none,
           right: isLast
-              ? BorderSide(color: isLit ? borderColor : Colors.transparent, width: 0.8)
+              ? BorderSide(
+                  color: isLit ? borderColor : Colors.transparent,
+                  width: 0.8,
+                )
               : BorderSide(color: dividerColor, width: 1.0),
         ),
         boxShadow: shadows,
+      ),
+    );
+  }
+}
+
+/// Minimal, sleek, 45-degree tilted counter badge for squircle deck.
+/// Displays situational time: 'mm:ss' when elapsed < 3600s, 'hh:mm' when >= 3600s.
+class DeckTimeCounter extends StatelessWidget {
+  final int elapsedSeconds;
+  final bool isDark;
+  final bool isFocusMode;
+  final bool isRunning;
+
+  const DeckTimeCounter({
+    super.key,
+    required this.elapsedSeconds,
+    required this.isDark,
+    required this.isFocusMode,
+    required this.isRunning,
+  });
+
+  static String formatSituational(int seconds) {
+    if (seconds < 3600) {
+      final m = (seconds ~/ 60).toString().padLeft(2, '0');
+      final s = (seconds % 60).toString().padLeft(2, '0');
+      return '$m:$s';
+    } else {
+      final h = (seconds ~/ 3600).toString().padLeft(2, '0');
+      final m = ((seconds % 3600) ~/ 60).toString().padLeft(2, '0');
+      return '$h:$m';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final formattedTime = formatSituational(elapsedSeconds);
+
+    final Color textColor;
+    if (!isRunning) {
+      textColor = isDark ? const Color(0xFF7E8794) : const Color(0xFF6B7280);
+    } else if (isFocusMode) {
+      textColor = isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57);
+    } else {
+      textColor = isDark ? const Color(0xFFE5A93C) : const Color(0xFFC7841B);
+    }
+
+    return Container(
+      key: const Key('deck_time_counter'),
+      padding: const EdgeInsets.symmetric(horizontal: 5.0, vertical: 2.0),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0E1013) : const Color(0xFFE2E7EC),
+        border: Border.all(
+          color: isDark ? const Color(0xFF222830) : const Color(0xFFCAD1DA),
+          width: 1.0,
+        ),
+      ),
+      child: Text(
+        formattedTime,
+        style: TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.8,
+          fontFeatures: const [FontFeature.tabularFigures()],
+          color: textColor,
+        ),
       ),
     );
   }
@@ -664,10 +770,7 @@ class _RetroSpoolPainter extends CustomPainter {
   final double rotationAngle;
   final bool isDark;
 
-  _RetroSpoolPainter({
-    required this.rotationAngle,
-    required this.isDark,
-  });
+  _RetroSpoolPainter({required this.rotationAngle, required this.isDark});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -675,7 +778,9 @@ class _RetroSpoolPainter extends CustomPainter {
     final radius = size.width / 2;
 
     // 1. Solid Matte Base Disk Face
-    final baseColor = isDark ? const Color(0xFF141619) : const Color(0xFFF2F5F8);
+    final baseColor = isDark
+        ? const Color(0xFF141619)
+        : const Color(0xFFF2F5F8);
     final diskPaint = Paint()
       ..color = baseColor
       ..style = PaintingStyle.fill;
@@ -747,8 +852,14 @@ class _RetroSpoolPainter extends CustomPainter {
 
     for (int i = 0; i < 3; i++) {
       final angle = (math.pi / 3) + (i * 2 * math.pi / 3);
-      final p1 = Offset(radius * 0.25 * math.cos(angle), radius * 0.25 * math.sin(angle));
-      final p2 = Offset(radius * 0.86 * math.cos(angle), radius * 0.86 * math.sin(angle));
+      final p1 = Offset(
+        radius * 0.25 * math.cos(angle),
+        radius * 0.25 * math.sin(angle),
+      );
+      final p2 = Offset(
+        radius * 0.86 * math.cos(angle),
+        radius * 0.86 * math.sin(angle),
+      );
       canvas.drawLine(p1, p2, spokePaint);
     }
 
@@ -770,8 +881,14 @@ class _RetroSpoolPainter extends CustomPainter {
       final outerR = radius - 5;
       final innerR = isMajor ? radius - 13 : radius - 10;
 
-      final p1 = Offset(innerR * math.cos(tickAngle), innerR * math.sin(tickAngle));
-      final p2 = Offset(outerR * math.cos(tickAngle), outerR * math.sin(tickAngle));
+      final p1 = Offset(
+        innerR * math.cos(tickAngle),
+        innerR * math.sin(tickAngle),
+      );
+      final p2 = Offset(
+        outerR * math.cos(tickAngle),
+        outerR * math.sin(tickAngle),
+      );
       canvas.drawLine(p1, p2, isMajor ? majorTickPaint : tickPaint);
     }
 
