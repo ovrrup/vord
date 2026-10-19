@@ -514,7 +514,7 @@ class _OptionsSheetState extends State<OptionsSheet> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const InfoUpdatesScreen(),
+                      builder: (context) => InfoUpdatesScreen(sessionService: widget.sessionService),
                     ),
                   );
                 },

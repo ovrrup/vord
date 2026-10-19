@@ -24,6 +24,8 @@ class UpdateInfo {
   final bool isNewer;
   final UpdateChannel channel;
   final String? commitSha;
+  final int? actionRunNumber;
+  final bool isAvailable;
 
   const UpdateInfo({
     required this.version,
@@ -36,6 +38,8 @@ class UpdateInfo {
     required this.isNewer,
     required this.channel,
     this.commitSha,
+    this.actionRunNumber,
+    this.isAvailable = true,
   });
 }
 
@@ -47,7 +51,7 @@ class InstallResult {
 }
 
 /// Service managing in-app updates from GitHub for both
-/// official releases and bleeding-edge commit builds.
+/// official releases and bleeding-edge commit action builds.
 class UpdateService {
   static const String currentVersion = '0.1.0';
   static const String repoOwner = 'ovrrup';
@@ -114,10 +118,11 @@ class UpdateService {
       if (response.statusCode == 404) {
         return const UpdateInfo(
           version: currentVersion,
-          title: 'No Releases Found',
-          notes: 'No official releases have been published yet on this repository.',
+          title: 'No Official Releases Found',
+          notes: 'No official releases have been published yet for Vord on this repository.\n\nTo download the latest automated action builds, switch the update channel to "COMMIT BUILDS".',
           hasApk: false,
           isNewer: false,
+          isAvailable: false,
           channel: UpdateChannel.release,
         );
       }
@@ -159,6 +164,7 @@ class UpdateService {
         fileSize: apkSize,
         hasApk: apkUrl != null,
         isNewer: isNewer,
+        isAvailable: true,
         channel: UpdateChannel.release,
       );
     } finally {
@@ -166,39 +172,51 @@ class UpdateService {
     }
   }
 
-  /// Check latest commit on `main` branch
+  /// Check latest successful GitHub Actions workflow run on `main` branch
   static Future<UpdateInfo> _checkCommitUpdate() async {
     final client = HttpClient();
     client.connectionTimeout = const Duration(seconds: 10);
 
     try {
-      // 1. Fetch latest commit
-      final commitRequest = await client.getUrl(
-        Uri.parse('https://api.github.com/repos/$repoOwner/$repoName/commits/main'),
+      // 1. Query the latest successful GitHub Actions workflow run on main branch
+      final runsRequest = await client.getUrl(
+        Uri.parse('https://api.github.com/repos/$repoOwner/$repoName/actions/runs?branch=main&status=success&per_page=1'),
       );
-      commitRequest.headers.set('User-Agent', 'Vord-App');
-      commitRequest.headers.set('Accept', 'application/vnd.github.v3+json');
+      runsRequest.headers.set('User-Agent', 'Vord-App');
+      runsRequest.headers.set('Accept', 'application/vnd.github.v3+json');
 
-      final commitResponse = await commitRequest.close();
-      if (commitResponse.statusCode != 200) {
-        throw HttpException('GitHub API error: HTTP ${commitResponse.statusCode}');
+      final runsResponse = await runsRequest.close();
+      if (runsResponse.statusCode != 200) {
+        throw HttpException('GitHub Actions API error: HTTP ${runsResponse.statusCode}');
       }
 
-      final commitBody = await commitResponse.transform(utf8.decoder).join();
-      final commitData = jsonDecode(commitBody) as Map<String, dynamic>;
+      final runsBody = await runsResponse.transform(utf8.decoder).join();
+      final runsData = jsonDecode(runsBody) as Map<String, dynamic>;
+      final runsList = runsData['workflow_runs'] as List<dynamic>? ?? [];
 
-      final fullSha = commitData['sha'] as String? ?? 'unknown';
+      if (runsList.isEmpty) {
+        return const UpdateInfo(
+          version: 'None',
+          title: 'No Action Builds Found',
+          notes: 'No successful GitHub Actions workflow runs found on the main branch.',
+          hasApk: false,
+          isNewer: false,
+          isAvailable: false,
+          channel: UpdateChannel.commit,
+        );
+      }
+
+      final run = runsList.first as Map<String, dynamic>;
+      final runNumber = run['run_number'] as int? ?? 1;
+      final fullSha = run['head_sha'] as String? ?? 'unknown';
       final shortSha = fullSha.length > 7 ? fullSha.substring(0, 7) : fullSha;
-      final commitObj = commitData['commit'] as Map<String, dynamic>? ?? {};
-      final message = (commitObj['message'] as String? ?? 'Commit $shortSha').split('\n').first;
-      final authorObj = commitObj['author'] as Map<String, dynamic>? ?? {};
-      final dateStr = authorObj['date'] as String?;
-      final commitDate = dateStr != null ? DateTime.tryParse(dateStr) : null;
+      final headCommit = run['head_commit'] as Map<String, dynamic>? ?? {};
+      final commitMsg = (headCommit['message'] as String? ?? 'Action build #$runNumber').split('\n').first;
+      final updatedAtStr = run['updated_at'] as String? ?? run['created_at'] as String?;
+      final buildDate = updatedAtStr != null ? DateTime.tryParse(updatedAtStr) : null;
 
-      // 2. Look for nightly/pre-release build APK
-      String? apkUrl;
+      // 2. Query nightly release asset for size if available
       int? apkSize;
-
       try {
         final nightlyRequest = await client.getUrl(
           Uri.parse('https://api.github.com/repos/$repoOwner/$repoName/releases/tags/nightly'),
@@ -214,7 +232,6 @@ class UpdateService {
           for (final asset in assets) {
             final name = asset['name'] as String? ?? '';
             if (name.endsWith('.apk')) {
-              apkUrl = asset['browser_download_url'] as String?;
               apkSize = asset['size'] as int?;
               break;
             }
@@ -222,19 +239,20 @@ class UpdateService {
         }
       } catch (_) {}
 
-      // Fallback: direct nightly download url pattern if tagged
-      apkUrl ??= 'https://github.com/$repoOwner/$repoName/releases/download/nightly/app-release.apk';
+      final apkUrl = 'https://github.com/$repoOwner/$repoName/releases/download/nightly/app-release.apk';
 
       return UpdateInfo(
-        version: shortSha,
+        version: 'Action Build #$runNumber ($shortSha)',
         commitSha: fullSha,
-        title: message,
-        notes: 'Commit SHA: $fullSha\nBranch: main\nWARNING: Bleeding-edge build. May cause data loss.',
-        publishedAt: commitDate,
+        actionRunNumber: runNumber,
+        title: commitMsg,
+        notes: 'Latest successful GitHub Actions build from main branch.\nCommit: $fullSha\nRun ID: ${run['id']}',
+        publishedAt: buildDate,
         downloadUrl: apkUrl,
         fileSize: apkSize,
         hasApk: true,
-        isNewer: true, // Always allow pulling latest commit builds
+        isNewer: true,
+        isAvailable: true,
         channel: UpdateChannel.commit,
       );
     } finally {

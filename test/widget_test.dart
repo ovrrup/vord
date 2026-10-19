@@ -207,7 +207,7 @@ void main() {
     expect(find.text('START'), findsOneWidget);
   });
 
-  testWidgets('Options info & updates navigates to InfoUpdatesScreen with channel switch and risk warning', (WidgetTester tester) async {
+  testWidgets('Options info & updates navigates to InfoUpdatesScreen with interactive bay, action builds, and no-release state', (WidgetTester tester) async {
     await tester.pumpWidget(const VordApp(
       initialThemeMode: ThemeMode.light,
       animateBackground: false,
@@ -221,12 +221,29 @@ void main() {
     await tester.tap(find.text('INFO & UPDATES'));
     await tester.pumpAndSettle();
 
-    // Verify Info & Updates Screen Elements
-    expect(find.text('INFO & UPDATES'), findsOneWidget);
+    // Verify Machined Header
+    expect(find.text('SERVICE BAY // SPEC & UPDATES'), findsOneWidget);
+
+    // Verify Interactive Reel Hub & Trigger Spin
+    expect(find.textContaining('TAP OR DRAG SPINDLE'), findsOneWidget);
+    await tester.tap(find.textContaining('TAP OR DRAG SPINDLE'));
+    await tester.pump();
+
+    // Verify Specification & Repository Info
     expect(find.text('VORD'), findsOneWidget);
     expect(find.text('v${UpdateService.currentVersion}'), findsOneWidget);
     expect(find.text(UpdateService.repoOwner), findsOneWidget);
     expect(find.text('github.com/${UpdateService.repoOwner}/${UpdateService.repoName}'), findsOneWidget);
+
+    // Test Interactive Copy Action
+    await tester.tap(find.text('COPY'));
+    await tester.pump();
+    expect(find.text('OWNER COPIED'), findsOneWidget);
+
+    // Test Hardware Telemetry Accordion
+    await tester.tap(find.text('HARDWARE TELEMETRY & SPECS'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('100% OFFLINE-FIRST'), findsOneWidget);
 
     // Verify Update Channel selection
     expect(find.text('OFFICIAL RELEASE'), findsOneWidget);
@@ -245,30 +262,56 @@ void main() {
       find.textContaining('Commit-wise updates carry a huge risk of losing every data'),
       findsOneWidget,
     );
+    expect(find.text('SAFEGUARD DATA: EXPORT BACKUP NOW'), findsOneWidget);
 
-    // Test check update flow with mock
+    // Test Commit Build update check with mock (gets latest successful action build)
     UpdateService.mockCheckHandler = (channel) async {
       return const UpdateInfo(
-        version: '0.2.0',
-        title: 'Release v0.2.0',
-        notes: 'Tactile tape performance optimizations.',
+        version: 'Action Build #37 (81bd998)',
+        commitSha: '81bd998ccc8616a72f5b4affa86fc5145e17c7b6',
+        actionRunNumber: 37,
+        title: 'test: ensure Black Theme option is visible',
+        notes: 'Latest successful GitHub Actions build from main branch.',
         hasApk: true,
         isNewer: true,
-        channel: UpdateChannel.release,
-        downloadUrl: 'https://example.com/app-release.apk',
+        isAvailable: true,
+        channel: UpdateChannel.commit,
+        downloadUrl: 'https://github.com/ovrrup/vord/releases/download/nightly/app-release.apk',
       );
     };
 
-    // Switch back to release and check updates
+    await tester.ensureVisible(find.text('FETCH LATEST ACTION BUILD'));
+    await tester.tap(find.text('FETCH LATEST ACTION BUILD'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('SUCCESSFUL ACTION BUILD'), findsOneWidget);
+    expect(find.text('DOWNLOAD ACTION BUILD (APK)'), findsOneWidget);
+
+    // Test Official Release mode with 0 releases available (displays clear status and NO download button)
+    UpdateService.mockCheckHandler = (channel) async {
+      return const UpdateInfo(
+        version: '0.1.0',
+        title: 'No Official Releases Found',
+        notes: 'No official releases have been published yet for Vord on this repository.',
+        hasApk: false,
+        isNewer: false,
+        isAvailable: false,
+        channel: UpdateChannel.release,
+      );
+    };
+
+    await tester.ensureVisible(find.text('OFFICIAL RELEASE'));
     await tester.tap(find.text('OFFICIAL RELEASE'));
     await tester.pumpAndSettle();
     expect(find.text('DANGER: HIGH DATA LOSS RISK'), findsNothing);
 
-    await tester.tap(find.text('CHECK FOR UPDATES'));
+    await tester.ensureVisible(find.text('CHECK FOR OFFICIAL RELEASE'));
+    await tester.tap(find.text('CHECK FOR OFFICIAL RELEASE'));
     await tester.pumpAndSettle();
 
-    expect(find.text('AVAILABLE: v0.2.0'), findsOneWidget);
-    expect(find.text('DOWNLOAD APK UPDATE'), findsOneWidget);
+    expect(find.text('NO OFFICIAL RELEASES AVAILABLE'), findsOneWidget);
+    expect(find.text('DOWNLOAD APK UPDATE'), findsNothing);
+    expect(find.text('DOWNLOAD ACTION BUILD (APK)'), findsNothing);
 
     // Back to main deck
     await tester.tap(find.byIcon(Icons.arrow_back_rounded));
