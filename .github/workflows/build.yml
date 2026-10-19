@@ -35,26 +35,7 @@ jobs:
           fi
           # Ensure Gradle subprojects ignore CheckAarMetadata and use compatible compileSdk
           if [ -f "android/build.gradle" ]; then
-            cat << 'EOF' >> android/build.gradle
-
-allprojects {
-    tasks.withType(com.android.build.gradle.internal.tasks.CheckAarMetadata).configureEach {
-        enabled = false
-    }
-}
-subprojects {
-    afterEvaluate { project ->
-        if (project.hasProperty('android')) {
-            project.android {
-                if (namespace == null) {
-                    namespace project.group
-                }
-                compileSdkVersion 36
-            }
-        }
-    }
-}
-EOF
+            printf "\nallprojects {\n    tasks.withType(com.android.build.gradle.internal.tasks.CheckAarMetadata).configureEach {\n        enabled = false\n    }\n}\nsubprojects {\n    afterEvaluate { project ->\n        if (project.hasProperty('android')) {\n            project.android {\n                if (namespace == null) {\n                    namespace project.group\n                }\n                compileSdkVersion 36\n            }\n        }\n    }\n}\n" >> android/build.gradle
           fi
           if [ -f "android/gradle.properties" ]; then
             echo "android.suppressUnsupportedCompileSdk=36" >> android/gradle.properties
