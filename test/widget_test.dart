@@ -284,6 +284,7 @@ void main() {
       await tester.tap(find.text('COPY'));
       await tester.pump();
       expect(find.text('OWNER COPIED'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 3));
 
       // Verify Update Channel selection
       await tester.ensureVisible(find.text('OFFICIAL RELEASE'));

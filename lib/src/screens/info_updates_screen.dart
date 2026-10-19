@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -35,6 +36,7 @@ class _InfoUpdatesScreenState extends State<InfoUpdatesScreen> {
   File? _downloadedApk;
   String? _installStatus;
   String? _notificationMessage;
+  Timer? _notificationTimer;
 
   static const String authorUsername = 'ovrrup';
   static const String authorUrl = 'https://github.com/ovrrup';
@@ -47,6 +49,12 @@ class _InfoUpdatesScreenState extends State<InfoUpdatesScreen> {
     super.initState();
     _sessionService = widget.sessionService ?? SessionService();
     _loadChannel();
+  }
+
+  @override
+  void dispose() {
+    _notificationTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadChannel() async {
@@ -84,10 +92,11 @@ class _InfoUpdatesScreenState extends State<InfoUpdatesScreen> {
   void _copyToClipboard(String text, String message) {
     Clipboard.setData(ClipboardData(text: text));
     SoundService.playTapeSwitchClick();
+    _notificationTimer?.cancel();
     setState(() {
       _notificationMessage = message;
     });
-    Future.delayed(const Duration(seconds: 2), () {
+    _notificationTimer = Timer(const Duration(seconds: 2), () {
       if (mounted) {
         setState(() {
           if (_notificationMessage == message) _notificationMessage = null;
