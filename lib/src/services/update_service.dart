@@ -260,7 +260,7 @@ class UpdateService {
       if (response.isRedirect) {
         final redirectUrl = response.headers.value(HttpHeaders.locationHeader);
         if (redirectUrl != null) {
-          return downloadApk(
+          return await downloadApk(
             downloadUrl: redirectUrl,
             onProgress: onProgress,
           );

@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vord/main.dart';
 import 'package:vord/src/models/session_mode.dart';
 import 'package:vord/src/screens/history_screen.dart';
-import 'package:vord/src/screens/info_updates_screen.dart';
 import 'package:vord/src/services/session_service.dart';
 import 'package:vord/src/services/sound_service.dart';
 import 'package:vord/src/services/update_service.dart';
