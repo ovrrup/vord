@@ -112,7 +112,9 @@ void main() {
     expect(find.text('Black Theme (Dark)'), findsOneWidget);
     expect(find.text('System Default'), findsOneWidget);
 
-    // Tap Black Theme
+    // Scroll into view and tap Black Theme
+    await tester.ensureVisible(find.text('Black Theme (Dark)'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Black Theme (Dark)'));
     await tester.pumpAndSettle();
 
