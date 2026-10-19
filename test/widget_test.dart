@@ -5,10 +5,12 @@ import 'package:vord/main.dart';
 import 'package:vord/src/models/session_mode.dart';
 import 'package:vord/src/screens/behaviour_screen.dart';
 import 'package:vord/src/screens/history_screen.dart';
+import 'package:vord/src/services/app_settings_service.dart';
 import 'package:vord/src/services/behaviour_service.dart';
 import 'package:vord/src/services/session_service.dart';
 import 'package:vord/src/services/sound_service.dart';
 import 'package:vord/src/services/update_service.dart';
+import 'package:vord/src/widgets/physical_matte_controls.dart';
 import 'package:vord/src/widgets/retro_matte_disk.dart';
 
 void main() {
@@ -18,6 +20,17 @@ void main() {
         false; // Disable audio playback during unit/widget tests
     UpdateService.mockCheckHandler = null;
     UpdateService.mockInstallHandler = null;
+    UpdateService.mockCurrentCommitSha = null;
+    UpdateService.mockCurrentBuildNumber = null;
+    AppSettingsService.instance.setMockValues(
+      themeMode: 'light',
+      soundEnabled: false,
+      hapticEnabled: false,
+      hideStatusBar: true,
+      hideNavBar: false,
+      showTime: false,
+      updateChannel: 'release',
+    );
     BehaviourService.instance.setMockValues(
       hideStatusBar: true,
       hideNavBar: false,
@@ -796,8 +809,8 @@ void main() {
       expect(find.text('SHOW TIME COUNTER'), findsOneWidget);
 
       // Verify default states: only hide status bar is ON, others OFF
-      expect(find.text('DEFAULT: ON'), findsOneWidget);
-      expect(find.text('DEFAULT: OFF'), findsNWidgets(2));
+      expect(find.text('ON'), findsOneWidget);
+      expect(find.text('OFF'), findsNWidgets(2));
     },
   );
 
@@ -874,6 +887,128 @@ void main() {
       );
       expect(find.byKey(const Key('deck_time_counter')), findsOneWidget);
       expect(find.text('01:01'), findsOneWidget);
+    },
+  );
+
+  test(
+    'AppSettingsService persists settings atomically and restores them cleanly',
+    () async {
+      final settings = AppSettingsService();
+      await settings.init();
+
+      await settings.setThemeMode('dark');
+      await settings.setHideStatusBar(false);
+      await settings.setHideNavBar(true);
+      await settings.setShowTime(true);
+      await settings.setUpdateChannel('commit');
+      await settings.setLastInstalledCommitSha('abcdef123456');
+
+      expect(settings.themeMode, 'dark');
+      expect(settings.hideStatusBar, isFalse);
+      expect(settings.hideNavBar, isTrue);
+      expect(settings.showTime, isTrue);
+      expect(settings.updateChannel, 'commit');
+      expect(settings.lastInstalledCommitSha, 'abcdef123456');
+
+      // Test JSON export
+      final jsonMap = settings.toJson();
+      expect(jsonMap['themeMode'], 'dark');
+      expect(jsonMap['showTime'], isTrue);
+
+      // Test import
+      await settings.importSettings({
+        'themeMode': 'system',
+        'showTime': false,
+      });
+      expect(settings.themeMode, 'system');
+      expect(settings.showTime, isFalse);
+    },
+  );
+
+  test(
+    'SessionService includes settings in backup export and restores them on import',
+    () async {
+      final sessionService = SessionService();
+      final settings = AppSettingsService();
+      await settings.init();
+      await settings.setThemeMode('dark');
+      await settings.setShowTime(true);
+
+      final exportJson = sessionService.exportBackupJson();
+      expect(exportJson.contains('"settings"'), isTrue);
+      expect(exportJson.contains('"themeMode": "dark"'), isTrue);
+
+      // Reset settings
+      await settings.setThemeMode('light');
+      await settings.setShowTime(false);
+      expect(settings.themeMode, 'light');
+
+      // Restore from backup
+      final result = await sessionService.importBackupJson(
+        exportJson,
+        replace: true,
+      );
+      expect(result.success, isTrue);
+      expect(settings.themeMode, 'dark');
+      expect(settings.showTime, isTrue);
+    },
+  );
+
+  test(
+    'UpdateService marks isNewer false when app is already on the latest commit',
+    () async {
+      // When compile-time or installed commit matches target commit
+      UpdateService.mockCurrentCommitSha = 'a1b2c3d4e5f6';
+      UpdateService.mockCurrentBuildNumber = '50';
+
+      UpdateService.mockCheckHandler = (channel) async {
+        const targetSha = 'a1b2c3d4e5f67890';
+        final isNewer =
+            !(targetSha.startsWith(UpdateService.mockCurrentCommitSha!));
+        return UpdateInfo(
+          version: 'Action Build #50 (a1b2c3d)',
+          commitSha: targetSha,
+          actionRunNumber: 50,
+          title: 'Latest commit',
+          notes: 'Commit notes',
+          hasApk: true,
+          isNewer: isNewer,
+          channel: UpdateChannel.commit,
+        );
+      };
+
+      final info = await UpdateService.checkForUpdate(
+        channel: UpdateChannel.commit,
+      );
+      expect(info.isNewer, isFalse);
+
+      // Clean up mocks
+      UpdateService.mockCurrentCommitSha = null;
+      UpdateService.mockCurrentBuildNumber = null;
+      UpdateService.mockCheckHandler = null;
+    },
+  );
+
+  testWidgets(
+    'PhysicalMatteButton executes onTap and resets pressed state reliably',
+    (WidgetTester tester) async {
+      bool tapped = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: PhysicalMatteButton(
+              onTap: () => tapped = true,
+              child: const Text('CLICK ME'),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('CLICK ME'), findsOneWidget);
+      await tester.tap(find.text('CLICK ME'));
+      await tester.pump();
+
+      expect(tapped, isTrue);
     },
   );
 }

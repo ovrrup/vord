@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'app_settings_service.dart';
 import '../models/session_mode.dart';
 import '../models/study_session.dart';
 
@@ -430,13 +431,14 @@ class SessionService extends ChangeNotifier {
   String exportBackupJson() {
     final payload = {
       'app': 'VORD',
-      'schemaVersion': _currentSchemaVersion,
+      'schemaVersion': 3,
       'exportedAt': DateTime.now().toUtc().toIso8601String(),
       'checksum': _computeChecksum(jsonEncode(_sessions.map((s) => s.toJson()).toList())),
       'totalSessions': _sessions.length,
       'allTimeFocusSeconds': allTimeFocusSeconds,
       'allTimeBreakSeconds': allTimeBreakSeconds,
       'personalRecordSeconds': personalRecordFocusSeconds,
+      'settings': AppSettingsService.instance.toJson(),
       'sessions': _sessions.map((s) => s.toJson()).toList(),
     };
     return const JsonEncoder.withIndent('  ').convert(payload);
@@ -510,6 +512,13 @@ class SessionService extends ChangeNotifier {
             skippedDuplicates++;
           }
         }
+      }
+
+      // Restore settings if present in archive
+      if (decoded.containsKey('settings') && decoded['settings'] is Map<String, dynamic>) {
+        try {
+          await AppSettingsService.instance.importSettings(decoded['settings'] as Map<String, dynamic>);
+        } catch (_) {}
       }
 
       _sessions.sort((a, b) => a.completedAt.compareTo(b.completedAt));

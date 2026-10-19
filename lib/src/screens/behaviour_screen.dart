@@ -3,8 +3,8 @@ import '../services/behaviour_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/physical_matte_controls.dart';
 
-/// Screen allowing the user to configure system overlay toggles (status bar, navigation bar)
-/// and deck readouts (45° tilted time counter).
+/// Clean, minimal screen allowing the user to configure system overlay toggles
+/// (hide status bar, hide navigation bar) and squircle deck time counter.
 class BehaviourScreen extends StatelessWidget {
   final BehaviourService? behaviourService;
 
@@ -94,73 +94,11 @@ class BehaviourScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Subtitle Telemetry Bar
-                        Container(
-                          padding: const EdgeInsets.all(14.0),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? const Color(0xFF16191D)
-                                : const Color(0xFFF2F5F8),
-                            border: Border.all(color: borderCol, width: 1.5),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.tune_rounded,
-                                    size: 16,
-                                    color: isDark
-                                        ? const Color(0xFF3FA36C)
-                                        : const Color(0xFF2E8B57),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'SYSTEM OVERLAYS & DECK READOUTS',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 1.2,
-                                      color: textPrimary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                'Manage device immersion, full-screen system overlays, and squircle deck time counter.',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: textSecondary,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Section 1: DEVICE SYSTEM BARS
-                        Text(
-                          'DEVICE SYSTEM BARS',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.5,
-                            color: textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-
                         // Toggle 1: Hide Status Bar (Device)
                         _buildToggleCard(
                           key: const Key('toggle_hide_status_bar'),
+                          icon: Icons.visibility_off_rounded,
                           title: 'HIDE STATUS BAR (DEVICE)',
-                          subtitle:
-                              'Hides top device status bar for immersive focus.',
-                          badgeLabel: 'DEFAULT: ON',
                           isEnabled: hideStatusBar,
                           isDark: isDark,
                           textPrimary: textPrimary,
@@ -169,15 +107,13 @@ class BehaviourScreen extends StatelessWidget {
                               _service.setHideStatusBar(!hideStatusBar),
                         ),
 
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
 
                         // Toggle 2: Hide Navigation Bar (Device)
                         _buildToggleCard(
                           key: const Key('toggle_hide_nav_bar'),
+                          icon: Icons.navigation_rounded,
                           title: 'HIDE NAVIGATION BAR (DEVICE)',
-                          subtitle:
-                              'Hides system navigation gestures / soft keys.',
-                          badgeLabel: 'DEFAULT: OFF',
                           isEnabled: hideNavBar,
                           isDark: isDark,
                           textPrimary: textPrimary,
@@ -185,27 +121,13 @@ class BehaviourScreen extends StatelessWidget {
                           onToggle: () => _service.setHideNavBar(!hideNavBar),
                         ),
 
-                        const SizedBox(height: 24),
-
-                        // Section 2: SQUIRCLE DECK READOUTS
-                        Text(
-                          'SQUIRCLE DECK READOUTS',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.5,
-                            color: textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
 
                         // Toggle 3: Show Time
                         _buildToggleCard(
                           key: const Key('toggle_show_time'),
+                          icon: Icons.schedule_rounded,
                           title: 'SHOW TIME COUNTER',
-                          subtitle:
-                              'Displays a 45° tilted counter (hh:mm or mm:ss) in the top-left of the squircle deck.',
-                          badgeLabel: 'DEFAULT: OFF',
                           isEnabled: showTime,
                           isDark: isDark,
                           textPrimary: textPrimary,
@@ -215,7 +137,7 @@ class BehaviourScreen extends StatelessWidget {
 
                         const SizedBox(height: 28),
 
-                        // Reset Button
+                        // Restore Defaults Button
                         PhysicalMatteButton(
                           key: const Key('reset_behaviour_defaults'),
                           onTap: () async {
@@ -279,9 +201,8 @@ class BehaviourScreen extends StatelessWidget {
 
   Widget _buildToggleCard({
     required Key key,
+    required IconData icon,
     required String title,
-    required String subtitle,
-    required String badgeLabel,
     required bool isEnabled,
     required bool isDark,
     required Color textPrimary,
@@ -299,78 +220,36 @@ class BehaviourScreen extends StatelessWidget {
       key: key,
       onTap: onToggle,
       borderRadius: 0.0,
-      padding: const EdgeInsets.all(14.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.8,
-                          color: textPrimary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF1B2026)
-                            : const Color(0xFFE4E9EF),
-                        border: Border.all(
-                          color: isDark
-                              ? const Color(0xFF2E3640)
-                              : const Color(0xFFCAD1DA),
-                          width: 1.0,
-                        ),
-                      ),
-                      child: Text(
-                        badgeLabel,
-                        style: TextStyle(
-                          fontSize: 8.5,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.5,
-                          color: textSecondary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: textSecondary,
-                    height: 1.35,
-                  ),
-                ),
-              ],
-            ),
+          Icon(
+            icon,
+            size: 20,
+            color: isEnabled ? activeColor : textSecondary,
           ),
           const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.8,
+                color: textPrimary,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
           // Tactile Status Badge
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: isEnabled
                   ? (isDark ? const Color(0xFF142B1E) : const Color(0xFFE2F3E9))
                   : (isDark
-                        ? const Color(0xFF181B20)
-                        : const Color(0xFFE8ECEF)),
+                      ? const Color(0xFF181B20)
+                      : const Color(0xFFE8ECEF)),
               border: Border.all(
                 color: isEnabled ? activeColor : inactiveColor,
                 width: 1.2,

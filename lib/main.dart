@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'src/screens/timer_screen.dart';
+import 'src/services/app_settings_service.dart';
 import 'src/services/behaviour_service.dart';
 import 'src/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize and apply behaviour preferences (hide status bar default = true, etc.)
+  // Initialize atomic settings and behaviour preferences
+  await AppSettingsService.instance.init();
   await BehaviourService.instance.init();
 
   SystemChrome.setSystemUIOverlayStyle(
@@ -21,18 +23,13 @@ Future<void> main() async {
   );
 
   ThemeMode initialThemeMode = ThemeMode.light;
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final savedMode = prefs.getString('theme_mode');
-    if (savedMode == 'dark') {
-      initialThemeMode = ThemeMode.dark;
-    } else if (savedMode == 'system') {
-      initialThemeMode = ThemeMode.system;
-    } else {
-      initialThemeMode = ThemeMode.light;
-    }
-  } catch (e) {
-    debugPrint('SharedPreferences theme load fallback: $e');
+  final savedMode = AppSettingsService.instance.themeMode;
+  if (savedMode == 'dark') {
+    initialThemeMode = ThemeMode.dark;
+  } else if (savedMode == 'system') {
+    initialThemeMode = ThemeMode.system;
+  } else {
+    initialThemeMode = ThemeMode.light;
   }
 
   runApp(VordApp(initialThemeMode: initialThemeMode));
@@ -67,15 +64,12 @@ class _VordAppState extends State<VordApp> {
     });
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
-        'theme_mode',
-        mode == ThemeMode.dark
-            ? 'dark'
-            : (mode == ThemeMode.system ? 'system' : 'light'),
-      );
+      final modeStr = mode == ThemeMode.dark
+          ? 'dark'
+          : (mode == ThemeMode.system ? 'system' : 'light');
+      await AppSettingsService.instance.setThemeMode(modeStr);
     } catch (e) {
-      debugPrint('SharedPreferences theme save error: $e');
+      debugPrint('Theme save error: $e');
     }
   }
 

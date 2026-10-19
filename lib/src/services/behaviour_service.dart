@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'app_settings_service.dart';
 
 /// Service managing device overlays and deck display behaviour preferences.
 ///
@@ -17,10 +17,12 @@ class BehaviourService extends ChangeNotifier {
 
   factory BehaviourService() => instance;
 
-  BehaviourService._internal();
+  BehaviourService._internal() {
+    // Listen to changes from AppSettingsService (e.g. on backup restore)
+    AppSettingsService.instance.addListener(_syncFromAppSettings);
+  }
 
-  bool _hideStatusBar =
-      true; // Default: true (User: only hide status bar should be enabled from default)
+  bool _hideStatusBar = true; // Default: true (User: only hide status bar should be enabled from default)
   bool _hideNavBar = false; // Default: false
   bool _showTime = false; // Default: false
   bool _isInitialized = false;
@@ -30,13 +32,35 @@ class BehaviourService extends ChangeNotifier {
   bool get showTime => _showTime;
   bool get isInitialized => _isInitialized;
 
-  /// Loads persisted preferences from SharedPreferences and applies system UI mode.
+  void _syncFromAppSettings() {
+    final settings = AppSettingsService.instance;
+    bool changed = false;
+    if (_hideStatusBar != settings.hideStatusBar) {
+      _hideStatusBar = settings.hideStatusBar;
+      changed = true;
+    }
+    if (_hideNavBar != settings.hideNavBar) {
+      _hideNavBar = settings.hideNavBar;
+      changed = true;
+    }
+    if (_showTime != settings.showTime) {
+      _showTime = settings.showTime;
+      changed = true;
+    }
+    if (changed) {
+      applySystemUiMode();
+      notifyListeners();
+    }
+  }
+
+  /// Loads persisted preferences from AppSettingsService and applies system UI mode.
   Future<void> init() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      _hideStatusBar = prefs.getBool(keyHideStatusBar) ?? true;
-      _hideNavBar = prefs.getBool(keyHideNavBar) ?? false;
-      _showTime = prefs.getBool(keyShowTime) ?? false;
+      await AppSettingsService.instance.init();
+      final settings = AppSettingsService.instance;
+      _hideStatusBar = settings.hideStatusBar;
+      _hideNavBar = settings.hideNavBar;
+      _showTime = settings.showTime;
     } catch (e) {
       debugPrint('BehaviourService init fallback: $e');
       _hideStatusBar = true;
@@ -56,8 +80,7 @@ class BehaviourService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(keyHideStatusBar, value);
+      await AppSettingsService.instance.setHideStatusBar(value);
     } catch (e) {
       debugPrint('BehaviourService setHideStatusBar error: $e');
     }
@@ -72,8 +95,7 @@ class BehaviourService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(keyHideNavBar, value);
+      await AppSettingsService.instance.setHideNavBar(value);
     } catch (e) {
       debugPrint('BehaviourService setHideNavBar error: $e');
     }
@@ -88,8 +110,7 @@ class BehaviourService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(keyShowTime, value);
+      await AppSettingsService.instance.setShowTime(value);
     } catch (e) {
       debugPrint('BehaviourService setShowTime error: $e');
     }
@@ -103,10 +124,7 @@ class BehaviourService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(keyHideStatusBar, true);
-      await prefs.setBool(keyHideNavBar, false);
-      await prefs.setBool(keyShowTime, false);
+      await AppSettingsService.instance.resetBehaviourDefaults();
     } catch (e) {
       debugPrint('BehaviourService resetToDefaults error: $e');
     }

@@ -65,7 +65,6 @@ class _InfoUpdatesScreenState extends State<InfoUpdatesScreen> {
   }
 
   Future<void> _handleChannelChange(UpdateChannel channel) async {
-    SoundService.playTapeSwitchClick();
     setState(() {
       _selectedChannel = channel;
       _updateInfo = null;
@@ -77,7 +76,6 @@ class _InfoUpdatesScreenState extends State<InfoUpdatesScreen> {
   }
 
   Future<void> _openUrl(String urlString) async {
-    SoundService.playTapeSwitchClick();
     try {
       final uri = Uri.parse(urlString);
       final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -91,7 +89,6 @@ class _InfoUpdatesScreenState extends State<InfoUpdatesScreen> {
 
   void _copyToClipboard(String text, String message) {
     Clipboard.setData(ClipboardData(text: text));
-    SoundService.playTapeSwitchClick();
     _notificationTimer?.cancel();
     setState(() {
       _notificationMessage = message;
@@ -106,7 +103,6 @@ class _InfoUpdatesScreenState extends State<InfoUpdatesScreen> {
   }
 
   Future<void> _handleCheckForUpdates() async {
-    SoundService.playTapeSwitchClick();
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -134,7 +130,6 @@ class _InfoUpdatesScreenState extends State<InfoUpdatesScreen> {
   }
 
   Future<void> _handleDownloadApk(String url) async {
-    SoundService.playTapeSwitchClick();
     setState(() {
       _isDownloading = true;
       _downloadProgress = 0.0;
@@ -175,14 +170,16 @@ class _InfoUpdatesScreenState extends State<InfoUpdatesScreen> {
 
   Future<void> _handleInstallApk() async {
     if (_downloadedApk == null) return;
-    SoundService.playTapeSwitchClick();
 
     setState(() {
       _installStatus = 'Starting installer...';
     });
 
     try {
-      final result = await UpdateService.installApk(_downloadedApk!.path);
+      final result = await UpdateService.installApk(
+        _downloadedApk!.path,
+        commitSha: _updateInfo?.commitSha,
+      );
       if (!mounted) return;
       setState(() {
         _installStatus = result.message;
@@ -1218,6 +1215,25 @@ class _InfoUpdatesScreenState extends State<InfoUpdatesScreen> {
                       color: Colors.white,
                     ),
                   ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF142B1E) : const Color(0xFFE2F3E9),
+                    border: Border.all(color: activeGreen, width: 1.0),
+                  ),
+                  child: Text(
+                    'UP TO DATE',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      color: activeGreen,
+                    ),
+                  ),
                 ),
             ],
           ),
@@ -1230,6 +1246,23 @@ class _InfoUpdatesScreenState extends State<InfoUpdatesScreen> {
               color: textPrimary,
             ),
           ),
+          if (!info.isNewer) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(Icons.check_circle_outline_rounded, size: 14, color: activeGreen),
+                const SizedBox(width: 6),
+                Text(
+                  'Your installed version is already up to date with this build.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: activeGreen,
+                  ),
+                ),
+              ],
+            ),
+          ],
           if (info.title.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
@@ -1292,8 +1325,12 @@ class _InfoUpdatesScreenState extends State<InfoUpdatesScreen> {
                     const SizedBox(width: 8),
                     Text(
                       isCommit
-                          ? 'DOWNLOAD ACTION BUILD (APK)'
-                          : 'DOWNLOAD RELEASE APK',
+                          ? (info.isNewer
+                              ? 'DOWNLOAD ACTION BUILD (APK)'
+                              : 'RE-DOWNLOAD BUILD (APK)')
+                          : (info.isNewer
+                              ? 'DOWNLOAD RELEASE APK'
+                              : 'RE-DOWNLOAD RELEASE APK'),
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w900,

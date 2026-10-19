@@ -37,24 +37,33 @@ class _PhysicalMatteButtonState extends State<PhysicalMatteButton> {
   bool _isPressed = false;
 
   void _handleTapDown(TapDownDetails details) {
-    if (_isPressed) return;
-    setState(() => _isPressed = true);
+    if (!_isPressed) {
+      setState(() => _isPressed = true);
+    }
+  }
+
+  void _handleTapUp(TapUpDetails details) {
+    if (_isPressed) {
+      setState(() => _isPressed = false);
+    }
+  }
+
+  void _handleTapCancel() {
+    if (_isPressed) {
+      setState(() => _isPressed = false);
+    }
+  }
+
+  void _handleTap() {
+    if (_isPressed) {
+      setState(() => _isPressed = false);
+    }
     if (widget.isTransportKey) {
       SoundService.playTapeTransportLatch();
     } else {
       SoundService.playTapeSwitchClick();
     }
-  }
-
-  void _handleTapUp(TapUpDetails details) {
-    if (!_isPressed) return;
-    setState(() => _isPressed = false);
     widget.onTap();
-  }
-
-  void _handleTapCancel() {
-    if (!_isPressed) return;
-    setState(() => _isPressed = false);
   }
 
   @override
@@ -81,6 +90,7 @@ class _PhysicalMatteButtonState extends State<PhysicalMatteButton> {
       onTapDown: _handleTapDown,
       onTapUp: _handleTapUp,
       onTapCancel: _handleTapCancel,
+      onTap: _handleTap,
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 35),

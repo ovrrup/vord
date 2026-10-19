@@ -63,7 +63,7 @@ jobs:
         run: flutter test
 
       - name: Compile Release APK
-        run: flutter build apk --release
+        run: flutter build apk --release --dart-define=APP_COMMIT_SHA=${{ github.sha }} --dart-define=APP_BUILD_NUMBER=${{ github.run_number }}
 
       - name: Sign Release APK with Production Keystore
         env:

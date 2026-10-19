@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
+import 'app_settings_service.dart';
 
 /// Available update channels
 enum UpdateChannel {
@@ -60,29 +62,69 @@ class UpdateService {
 
   static const String _channelPrefKey = 'vord_update_channel';
 
+  /// Compile-time commit SHA and build number injected via `--dart-define`
+  static const String currentCommitSha =
+      String.fromEnvironment('APP_COMMIT_SHA', defaultValue: '');
+  static const String currentBuildNumber =
+      String.fromEnvironment('APP_BUILD_NUMBER', defaultValue: '');
+
+  @visibleForTesting
+  static String? mockCurrentCommitSha;
+  @visibleForTesting
+  static String? mockCurrentBuildNumber;
+
   // Mock callback for unit/widget testing without network
   static Future<UpdateInfo>? Function(UpdateChannel channel)? mockCheckHandler;
   static Future<InstallResult>? Function(String path)? mockInstallHandler;
 
+  /// Get persisted last installed commit SHA
+  static Future<String?> getInstalledCommitSha() async {
+    try {
+      await AppSettingsService.instance.init();
+      return AppSettingsService.instance.lastInstalledCommitSha;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Persist installed commit SHA
+  static Future<void> setInstalledCommitSha(String sha) async {
+    try {
+      await AppSettingsService.instance.setLastInstalledCommitSha(sha);
+    } catch (_) {}
+  }
+
   /// Get persisted update channel (default: release)
   static Future<UpdateChannel> getUpdateChannel() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final saved = prefs.getString(_channelPrefKey);
+      await AppSettingsService.instance.init();
+      final saved = AppSettingsService.instance.updateChannel;
       if (saved == 'commit') return UpdateChannel.commit;
-    } catch (_) {}
+    } catch (_) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final saved = prefs.getString(_channelPrefKey);
+        if (saved == 'commit') return UpdateChannel.commit;
+      } catch (_) {}
+    }
     return UpdateChannel.release;
   }
 
   /// Persist update channel
   static Future<void> setUpdateChannel(UpdateChannel channel) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
-        _channelPrefKey,
+      await AppSettingsService.instance.setUpdateChannel(
         channel == UpdateChannel.commit ? 'commit' : 'release',
       );
-    } catch (_) {}
+    } catch (_) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+          _channelPrefKey,
+          channel == UpdateChannel.commit ? 'commit' : 'release',
+        );
+      } catch (_) {}
+    }
   }
 
   /// Check for updates on the selected or specified channel
@@ -239,7 +281,35 @@ class UpdateService {
         }
       } catch (_) {}
 
-      const apkUrl = 'https://github.com/ovrrup/vord/releases/download/nightly/app-release.apk';
+      final effectiveCommitSha = mockCurrentCommitSha ?? currentCommitSha;
+      final effectiveBuildNumber = mockCurrentBuildNumber ?? currentBuildNumber;
+      final installedSha = await getInstalledCommitSha();
+
+      bool isNewer = true;
+
+      // 1. Check if compile-time SHA matches GitHub run head SHA
+      if (effectiveCommitSha.isNotEmpty && fullSha.isNotEmpty && fullSha != 'unknown') {
+        if (fullSha.toLowerCase().startsWith(effectiveCommitSha.toLowerCase()) ||
+            effectiveCommitSha.toLowerCase().startsWith(fullSha.toLowerCase())) {
+          isNewer = false;
+        }
+      }
+
+      // 2. Check if compile-time action run number matches or is newer
+      if (effectiveBuildNumber.isNotEmpty) {
+        final currentRun = int.tryParse(effectiveBuildNumber);
+        if (currentRun != null && runNumber <= currentRun) {
+          isNewer = false;
+        }
+      }
+
+      // 3. Check if user already installed this commit build
+      if (installedSha != null && installedSha.isNotEmpty && fullSha.isNotEmpty && fullSha != 'unknown') {
+        if (fullSha.toLowerCase().startsWith(installedSha.toLowerCase()) ||
+            installedSha.toLowerCase().startsWith(fullSha.toLowerCase())) {
+          isNewer = false;
+        }
+      }
 
       return UpdateInfo(
         version: 'Action Build #$runNumber ($shortSha)',
@@ -251,7 +321,7 @@ class UpdateService {
         downloadUrl: apkUrl,
         fileSize: apkSize,
         hasApk: true,
-        isNewer: true,
+        isNewer: isNewer,
         isAvailable: true,
         channel: UpdateChannel.commit,
       );
@@ -316,7 +386,11 @@ class UpdateService {
   }
 
   /// Trigger Android Package Installer to install APK
-  static Future<InstallResult> installApk(String filePath) async {
+  static Future<InstallResult> installApk(String filePath, {String? commitSha}) async {
+    if (commitSha != null && commitSha.isNotEmpty) {
+      await setInstalledCommitSha(commitSha);
+    }
+
     if (mockInstallHandler != null) {
       final mock = await mockInstallHandler!(filePath);
       if (mock != null) return mock;
