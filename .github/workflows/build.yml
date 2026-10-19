@@ -60,6 +60,8 @@ jobs:
         run: flutter analyze --no-fatal-infos
 
       - name: Run widget tests
+        env:
+          FLUTTER_TEST: "true"
         run: flutter test
 
       - name: Compile Release APK

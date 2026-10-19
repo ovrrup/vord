@@ -18,6 +18,9 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    AppSettingsService.isTestMode = true;
+    SessionService.isTestMode = true;
+    BehaviourService.isTestMode = true;
     SoundService.enableAudio =
         false; // Disable audio playback during unit/widget tests
     UpdateService.mockCheckHandler = null;
@@ -745,7 +748,7 @@ void main() {
       final service = BehaviourService();
       // Re-init with empty SharedPreferences
       SharedPreferences.setMockInitialValues({});
-      await service.init();
+      await service.init(force: true);
 
       expect(service.hideStatusBar, isTrue);
       expect(service.hideNavBar, isFalse);
@@ -896,7 +899,7 @@ void main() {
     'AppSettingsService persists settings atomically and restores them cleanly',
     () async {
       final settings = AppSettingsService();
-      await settings.init();
+      await settings.init(force: true);
 
       await settings.setThemeMode('dark');
       await settings.setHideStatusBar(false);
@@ -932,7 +935,7 @@ void main() {
     () async {
       final sessionService = SessionService();
       final settings = AppSettingsService();
-      await settings.init();
+      await settings.init(force: true);
       await settings.setThemeMode('dark');
       await settings.setShowTime(true);
 

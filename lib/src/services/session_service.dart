@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'app_settings_service.dart';
@@ -33,13 +34,20 @@ class SessionService extends ChangeNotifier {
   Future<void> get ready => _initCompleter.future;
   bool get isInitialized => _initialized;
 
+  // Test mode flag
+  static bool isTestMode = false;
+  static bool get _inTest =>
+      isTestMode ||
+      Platform.environment.containsKey('FLUTTER_TEST') ||
+      (WidgetsBinding.instance.runtimeType.toString().contains('Test'));
+
   /// Unmodifiable view of sessions sorted newest to oldest.
   List<StudySession> get sessions => List.unmodifiable(_sessions.reversed);
 
   /// Initializes the local database, migrating from legacy storage if needed.
   Future<void> _initializeOfflineStorage() async {
     try {
-      if (!Platform.environment.containsKey('FLUTTER_TEST')) {
+      if (!_inTest) {
         try {
           final docsDir = await getApplicationDocumentsDirectory();
           _databaseFile = File('${docsDir.path}/$_dbFileName');
@@ -100,7 +108,7 @@ class SessionService extends ChangeNotifier {
       }
 
       // 6. Ensure disk and cache are synchronized
-      if (loadedFromDisk) {
+      if (loadedFromDisk && !_inTest) {
         _queueDiskWrite();
       }
     } catch (_) {}
@@ -147,6 +155,9 @@ class SessionService extends ChangeNotifier {
   /// Queues an atomic write to disk, serialized through a mutex chain
   /// to eliminate race conditions during rapid writes.
   Future<void> _queueDiskWrite() {
+    if (_inTest) {
+      return _performAtomicDiskWrite();
+    }
     final previousChain = _activeWriteChain ?? Future.value();
     final completer = Completer<void>();
     _activeWriteChain = completer.future;
@@ -169,7 +180,7 @@ class SessionService extends ChangeNotifier {
       final jsonString = jsonEncode(payload);
 
       // 1. Primary write to atomic file if filesystem available
-      if (_databaseFile != null) {
+      if (!_inTest && _databaseFile != null) {
         final parentDir = _databaseFile!.parent;
         if (!await parentDir.exists()) {
           await parentDir.create(recursive: true);

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'src/screens/timer_screen.dart';
 import 'src/services/app_settings_service.dart';
 import 'src/services/behaviour_service.dart';
@@ -66,6 +67,8 @@ class _VordAppState extends State<VordApp> {
       final modeStr = mode == ThemeMode.dark
           ? 'dark'
           : (mode == ThemeMode.system ? 'system' : 'light');
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('theme_mode', modeStr);
       await AppSettingsService.instance.setThemeMode(modeStr);
     } catch (e) {
       debugPrint('Theme save error: $e');

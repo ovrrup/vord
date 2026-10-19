@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -48,15 +49,22 @@ class AppSettingsService extends ChangeNotifier {
   String get updateChannel => _updateChannel;
   String? get lastInstalledCommitSha => _lastInstalledCommitSha;
 
-  // Enable atomic disk file storage (disabled during flutter test to avoid unmocked platform channels)
-  static bool enableDiskStorage = !Platform.environment.containsKey('FLUTTER_TEST');
+  // Test mode flag
+  static bool isTestMode = false;
+  static bool get _inTest =>
+      isTestMode ||
+      Platform.environment.containsKey('FLUTTER_TEST') ||
+      (WidgetsBinding.instance.runtimeType.toString().contains('Test'));
+
+  // Enable atomic disk file storage (disabled during tests to avoid unmocked platform channels)
+  static bool enableDiskStorage = true;
 
   /// Initializes the storage engine, loading from disk, backup, or cache.
-  Future<void> init() async {
-    if (_isInitialized) return;
+  Future<void> init({bool force = false}) async {
+    if (_isInitialized && !force) return;
 
     try {
-      if (enableDiskStorage) {
+      if (!_inTest && enableDiskStorage) {
         try {
           final docsDir = await getApplicationDocumentsDirectory();
           _settingsFile = File('${docsDir.path}/$_settingsFileName');
@@ -116,7 +124,7 @@ class AppSettingsService extends ChangeNotifier {
         } catch (_) {}
       }
 
-      if (loaded) {
+      if (loaded && !_inTest) {
         _queueDiskWrite();
       }
     } catch (_) {}
@@ -271,6 +279,9 @@ class AppSettingsService extends ChangeNotifier {
   }
 
   Future<void> _queueDiskWrite() {
+    if (_inTest) {
+      return _performAtomicDiskWrite();
+    }
     final previousChain = _activeWriteChain ?? Future.value();
     final completer = Completer<void>();
     _activeWriteChain = completer.future;
@@ -294,7 +305,7 @@ class AppSettingsService extends ChangeNotifier {
       final jsonString = jsonEncode(toJson());
 
       // 1. Primary write to atomic file with .bak rolling backup
-      if (_settingsFile != null) {
+      if (!_inTest && _settingsFile != null) {
         final parentDir = _settingsFile!.parent;
         if (!await parentDir.exists()) {
           await parentDir.create(recursive: true);
@@ -338,6 +349,8 @@ class AppSettingsService extends ChangeNotifier {
     String? updateChannel,
     String? lastInstalledCommitSha,
   }) {
+    isTestMode = true;
+    _isInitialized = true;
     if (themeMode != null) _themeMode = themeMode;
     if (soundEnabled != null) _soundEnabled = soundEnabled;
     if (hapticEnabled != null) _hapticEnabled = hapticEnabled;

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'app_settings_service.dart';
 
 /// Service managing device overlays and deck display behaviour preferences.
@@ -13,6 +14,13 @@ class BehaviourService extends ChangeNotifier {
   static const String keyHideStatusBar = 'vord_hide_status_bar';
   static const String keyHideNavBar = 'vord_hide_nav_bar';
   static const String keyShowTime = 'vord_show_time';
+
+  // Test mode flag
+  static bool isTestMode = false;
+  static bool get _inTest =>
+      isTestMode ||
+      Platform.environment.containsKey('FLUTTER_TEST') ||
+      (WidgetsBinding.instance.runtimeType.toString().contains('Test'));
 
   static final BehaviourService instance = BehaviourService._internal();
 
@@ -55,9 +63,9 @@ class BehaviourService extends ChangeNotifier {
   }
 
   /// Loads persisted preferences from AppSettingsService and applies system UI mode.
-  Future<void> init() async {
+  Future<void> init({bool force = false}) async {
     try {
-      await AppSettingsService.instance.init();
+      await AppSettingsService.instance.init(force: force);
       final settings = AppSettingsService.instance;
       _hideStatusBar = settings.hideStatusBar;
       _hideNavBar = settings.hideNavBar;
@@ -70,7 +78,9 @@ class BehaviourService extends ChangeNotifier {
     }
 
     _isInitialized = true;
-    await applySystemUiMode();
+    if (!_inTest) {
+      await applySystemUiMode();
+    }
     notifyListeners();
   }
 
@@ -135,7 +145,7 @@ class BehaviourService extends ChangeNotifier {
 
   /// Applies the system UI overlay configuration to the device.
   Future<void> applySystemUiMode() async {
-    if (Platform.environment.containsKey('FLUTTER_TEST')) return;
+    if (_inTest) return;
     try {
       if (_hideStatusBar && _hideNavBar) {
         await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
@@ -163,6 +173,8 @@ class BehaviourService extends ChangeNotifier {
   /// Helper for unit and widget testing to set mock state without persistence.
   @visibleForTesting
   void setMockValues({bool? hideStatusBar, bool? hideNavBar, bool? showTime}) {
+    isTestMode = true;
+    _isInitialized = true;
     if (hideStatusBar != null) _hideStatusBar = hideStatusBar;
     if (hideNavBar != null) _hideNavBar = hideNavBar;
     if (showTime != null) _showTime = showTime;
