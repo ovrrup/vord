@@ -239,7 +239,7 @@ class UpdateService {
         }
       } catch (_) {}
 
-      final apkUrl = 'https://github.com/$repoOwner/$repoName/releases/download/nightly/app-release.apk';
+      const apkUrl = 'https://github.com/ovrrup/vord/releases/download/nightly/app-release.apk';
 
       return UpdateInfo(
         version: 'Action Build #$runNumber ($shortSha)',

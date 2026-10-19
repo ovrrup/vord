@@ -1265,14 +1265,14 @@ class _InteractiveHubPainter extends CustomPainter {
     final outerBorderPaint = Paint()
       ..color = isDark ? const Color(0xFF3E4652) : const Color(0xFFAAB4BE)
       ..style = PaintingStyle.stroke
-      ..width = 1.5;
+      ..strokeWidth = 1.5;
     canvas.drawCircle(Offset.zero, radius, outerBorderPaint);
 
     // 2. Lathe circular grooves
     final groovePaint = Paint()
       ..color = isDark ? const Color(0xFF1B1E23) : const Color(0xFFE2E7EC)
       ..style = PaintingStyle.stroke
-      ..width = 1.0;
+      ..strokeWidth = 1.0;
     canvas.drawCircle(Offset.zero, radius * 0.82, groovePaint);
     canvas.drawCircle(Offset.zero, radius * 0.65, groovePaint);
 
