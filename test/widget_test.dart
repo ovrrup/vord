@@ -201,13 +201,14 @@ void main() {
 
   test('SessionService exports and imports backup archives cleanly', () async {
     final sessionService = SessionService();
-    sessionService.recordSession(SessionModeType.focus, 1800);
-    sessionService.recordSession(SessionModeType.shortBreak, 300);
+    await sessionService.recordSession(SessionModeType.focus, 1800);
+    await sessionService.recordSession(SessionModeType.shortBreak, 300);
 
     final exportedJson = sessionService.exportBackupJson();
     expect(exportedJson.contains('VORD'), isTrue);
     expect(exportedJson.contains('1800'), isTrue);
     expect(exportedJson.contains('300'), isTrue);
+    expect(exportedJson.contains('checksum'), isTrue);
 
     // Clear and restore
     await sessionService.clearAllSessions();
@@ -219,6 +220,49 @@ void main() {
     expect(sessionService.totalSessionCount, 2);
     expect(sessionService.allTimeFocusSeconds, 1800);
     expect(sessionService.allTimeBreakSeconds, 300);
+  });
+
+  test('SessionService smart deduplication prevents duplicate sessions during merge imports', () async {
+    final sessionService = SessionService();
+    await sessionService.clearAllSessions();
+
+    await sessionService.recordSession(SessionModeType.focus, 1500);
+    await sessionService.recordSession(SessionModeType.shortBreak, 300);
+    expect(sessionService.totalSessionCount, 2);
+
+    final exportJson = sessionService.exportBackupJson();
+
+    // Re-importing the same backup in MERGE mode should detect duplicates and skip them
+    final mergeResult = await sessionService.importBackupJson(exportJson, replace: false);
+    expect(mergeResult.success, isTrue);
+    expect(mergeResult.importedCount, 0);
+    expect(mergeResult.skippedCount, 2);
+    expect(sessionService.totalSessionCount, 2); // No duplicates added!
+  });
+
+  test('SessionService offline analytics computes personal records and self-competition metrics', () async {
+    final sessionService = SessionService();
+    await sessionService.clearAllSessions();
+
+    await sessionService.recordSession(SessionModeType.focus, 1200); // 20 min
+    await sessionService.recordSession(SessionModeType.focus, 2400); // 40 min
+    await sessionService.recordSession(SessionModeType.shortBreak, 600); // 10 min
+
+    expect(sessionService.totalSessionCount, 3);
+    expect(sessionService.personalRecordFocusSeconds, 2400);
+    expect(sessionService.todayBestFocusSeconds, 2400);
+    expect(sessionService.todayFocusSeconds, 3600);
+    expect(sessionService.todayFocusMinutes, 60);
+    expect(sessionService.todayBreakSeconds, 600);
+    expect(sessionService.todayFocusCount, 2);
+    expect(sessionService.todayBreakCount, 1);
+    expect(sessionService.focusToBreakRatio, 6.0); // 3600 / 600 = 6.0
+    expect(sessionService.lastFocusDurationSeconds, 2400);
+
+    // Zero or negative durations must be safely rejected
+    final invalidSession = await sessionService.recordSession(SessionModeType.focus, 0);
+    expect(invalidSession, isNull);
+    expect(sessionService.totalSessionCount, 3);
   });
 
   testWidgets('Squircle deck 4 box lights only illuminate when decided milestone times are up', (WidgetTester tester) async {

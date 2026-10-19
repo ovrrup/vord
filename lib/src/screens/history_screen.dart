@@ -70,16 +70,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
     final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
 
-    final filteredSessions = _getFilteredSessions();
-    final totalFocusSec = widget.sessionService.todayFocusSeconds;
-    final bestFocusSec = widget.sessionService.todayBestFocusSeconds;
-
     return Scaffold(
       backgroundColor: bg,
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+        child: ListenableBuilder(
+          listenable: widget.sessionService,
+          builder: (context, _) {
+            final filteredSessions = _getFilteredSessions();
+            final totalFocusSec = widget.sessionService.todayFocusSeconds;
+            final bestFocusSec = widget.sessionService.todayBestFocusSeconds;
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
             // 1. Sharp Tape Recorder Deck Header
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
@@ -372,9 +375,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     ),
             ),
           ],
-        ),
-      ),
-    );
+        );
+      },
+    ),
+  ),
+);
   }
 
   Widget _buildCategoryTab({

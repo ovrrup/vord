@@ -253,17 +253,20 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
     final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
     final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
 
-    final totalCount = widget.sessionService.totalSessionCount;
-    final focusSec = widget.sessionService.allTimeFocusSeconds;
-    final breakSec = widget.sessionService.allTimeBreakSeconds;
-    final sizeKb = (widget.sessionService.storageSizeBytes / 1024.0).toStringAsFixed(1);
-
     return Scaffold(
       backgroundColor: bg,
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+        child: ListenableBuilder(
+          listenable: widget.sessionService,
+          builder: (context, _) {
+            final totalCount = widget.sessionService.totalSessionCount;
+            final focusSec = widget.sessionService.allTimeFocusSeconds;
+            final breakSec = widget.sessionService.allTimeBreakSeconds;
+            final sizeKb = (widget.sessionService.storageSizeBytes / 1024.0).toStringAsFixed(1);
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
             // 1. Header
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
@@ -569,8 +572,10 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
               ),
             ),
           ],
-        ),
-      ),
-    );
+        );
+      },
+    ),
+  ),
+);
   }
 }
