@@ -411,7 +411,7 @@ class _ThemeSettingsSheetState extends State<ThemeSettingsSheet> {
                   );
                 },
                 borderRadius: 0.0,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Row(
                   children: [
                     Icon(
@@ -421,28 +421,14 @@ class _ThemeSettingsSheetState extends State<ThemeSettingsSheet> {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'SESSION HISTORY & TIME LOGS',
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.8,
-                              color: textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'View recorded focus times & rest intervals',
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w400,
-                              color: textSecondary,
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        'SESSION HISTORY',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.8,
+                          color: textPrimary,
+                        ),
                       ),
                     ),
                     Icon(
@@ -468,7 +454,7 @@ class _ThemeSettingsSheetState extends State<ThemeSettingsSheet> {
                   );
                 },
                 borderRadius: 0.0,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Row(
                   children: [
                     Icon(
@@ -478,28 +464,14 @@ class _ThemeSettingsSheetState extends State<ThemeSettingsSheet> {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'DATA & BACKUP ARCHIVE',
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.8,
-                              color: textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'JSON export, backup restore & data management',
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w400,
-                              color: textSecondary,
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        'DATA & BACKUP',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.8,
+                          color: textPrimary,
+                        ),
                       ),
                     ),
                     Icon(
@@ -533,9 +505,6 @@ class _ThemeSettingsSheetState extends State<ThemeSettingsSheet> {
                         final next = !_soundEnabled;
                         setState(() => _soundEnabled = next);
                         SoundService.setSoundEnabled(next);
-                        if (next) {
-                          SoundService.playTapeSwitchClick();
-                        }
                       },
                       borderRadius: 0.0,
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -581,9 +550,6 @@ class _ThemeSettingsSheetState extends State<ThemeSettingsSheet> {
                         final next = !_hapticEnabled;
                         setState(() => _hapticEnabled = next);
                         SoundService.setHapticEnabled(next);
-                        if (next) {
-                          SoundService.playTapeSwitchClick();
-                        }
                       },
                       borderRadius: 0.0,
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -661,21 +627,6 @@ class _ThemeSettingsSheetState extends State<ThemeSettingsSheet> {
                 icon: Icons.brightness_auto_outlined,
                 mode: ThemeMode.system,
                 isDark: isDark,
-              ),
-
-              const SizedBox(height: 18),
-
-              // Deck spec model mark
-              Center(
-                child: Text(
-                  'VORD TC-01 • SOLID MATTE TAPE STOPWATCH',
-                  style: TextStyle(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.4,
-                    color: textSecondary.withAlpha(160),
-                  ),
-                ),
               ),
             ],
           ),

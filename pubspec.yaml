@@ -13,6 +13,9 @@ dependencies:
   cupertino_icons: ^1.0.6
   shared_preferences: ^2.2.3
   audioplayers: ^6.1.0
+  path_provider: ^2.1.2
+  file_picker: ^8.0.5
+  share_plus: ^9.0.0
 
 dev_dependencies:
   flutter_test:

@@ -97,7 +97,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify Settings Options
-    expect(find.text('SESSION HISTORY & TIME LOGS'), findsOneWidget);
+    expect(find.text('SESSION HISTORY'), findsOneWidget);
     expect(find.text('THEME SETTING'), findsOneWidget);
     expect(find.text('White Mode (Light)'), findsOneWidget);
     expect(find.text('Black Theme (Dark)'), findsOneWidget);
@@ -124,11 +124,11 @@ void main() {
     await tester.pumpAndSettle();
 
     // Tap Category & Session History
-    await tester.tap(find.text('SESSION HISTORY & TIME LOGS'));
+    await tester.tap(find.text('SESSION HISTORY'));
     await tester.pumpAndSettle();
 
     // Verify Category & History Screen
-    expect(find.text('SESSION LOG & HISTORY'), findsOneWidget);
+    expect(find.text('SESSION HISTORY'), findsOneWidget);
     expect(find.text('ALL LOGS'), findsOneWidget);
     expect(find.text('FOCUS SESSIONS'), findsOneWidget);
     expect(find.text('REST INTERVALS'), findsOneWidget);
@@ -151,7 +151,7 @@ void main() {
       home: HistoryScreen(sessionService: sessionService),
     ));
 
-    expect(find.text('SESSION LOG & HISTORY'), findsOneWidget);
+    expect(find.text('SESSION HISTORY'), findsOneWidget);
     expect(find.text('FOCUS SESSION'), findsOneWidget);
     expect(find.text('REST INTERVAL'), findsOneWidget);
     expect(find.text('25m 00s'), findsWidgets);
@@ -168,7 +168,7 @@ void main() {
     await tester.tap(find.text('SETTINGS'));
     await tester.pumpAndSettle();
 
-    expect(find.text('DATA & BACKUP ARCHIVE'), findsOneWidget);
+    expect(find.text('DATA & BACKUP'), findsOneWidget);
     expect(find.text('SOUND & HAPTICS'), findsOneWidget);
     expect(find.text('SOUND FX'), findsOneWidget);
     expect(find.text('HAPTICS'), findsOneWidget);
@@ -179,15 +179,14 @@ void main() {
     expect(SoundService.soundEnabled, false);
 
     // Tap Data & Backup to navigate
-    await tester.tap(find.text('DATA & BACKUP ARCHIVE'));
+    await tester.tap(find.text('DATA & BACKUP'));
     await tester.pumpAndSettle();
 
     // Verify Data & Backup screen
-    expect(find.text('DATA & BACKUP ARCHIVE'), findsOneWidget);
-    expect(find.text('BACKUP EXPORT'), findsOneWidget);
-    expect(find.text('BACKUP IMPORT & RESTORE'), findsOneWidget);
-    expect(find.text('DATA MAINTENANCE'), findsOneWidget);
-    expect(find.text('COPY BACKUP JSON'), findsOneWidget);
+    expect(find.text('DATA & BACKUP'), findsOneWidget);
+    expect(find.text('EXPORT BACKUP FILE'), findsOneWidget);
+    expect(find.text('RESTORE FROM FILE'), findsOneWidget);
+    expect(find.text('CLEAR ALL SESSIONS'), findsOneWidget);
 
     // Back to main
     await tester.tap(find.byIcon(Icons.arrow_back_rounded));

@@ -1,13 +1,14 @@
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../services/session_service.dart';
-import '../services/sound_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/physical_matte_controls.dart';
 
 /// Data and Backup Archive Screen.
-/// Enables users to export session history as a JSON backup,
-/// import and restore sessions (merge or overwrite), and manage data archives.
+/// File-based backup export and import for session records.
 class DataBackupScreen extends StatefulWidget {
   final SessionService sessionService;
 
@@ -21,16 +22,9 @@ class DataBackupScreen extends StatefulWidget {
 }
 
 class _DataBackupScreenState extends State<DataBackupScreen> {
-  final TextEditingController _importController = TextEditingController();
-  bool _showPreview = false;
-  String? _feedbackMessage;
-  bool _isFeedbackSuccess = true;
-
-  @override
-  void dispose() {
-    _importController.dispose();
-    super.dispose();
-  }
+  String? _statusMessage;
+  bool _isSuccess = true;
+  bool _isLoading = false;
 
   String _formatDuration(int seconds) {
     final hours = seconds ~/ 3600;
@@ -41,73 +35,112 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
     return '${minutes}m ${seconds % 60}s';
   }
 
-  void _handleCopyBackup() {
-    SoundService.playTapeSwitchClick();
-    final jsonText = widget.sessionService.exportBackupJson();
-    Clipboard.setData(ClipboardData(text: jsonText));
-
+  Future<void> _handleExportFile() async {
     setState(() {
-      _feedbackMessage = 'Backup JSON copied to clipboard!';
-      _isFeedbackSuccess = true;
+      _isLoading = true;
+      _statusMessage = null;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Backup JSON copied to clipboard'),
-        duration: Duration(seconds: 2),
-      ),
-    );
-  }
+    try {
+      final jsonText = widget.sessionService.exportBackupJson();
+      final now = DateTime.now();
+      final timestamp = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+      final fileName = 'vord_backup_$timestamp.json';
 
-  Future<void> _handlePasteClipboard() async {
-    SoundService.playTapeSwitchClick();
-    final data = await Clipboard.getData('text/plain');
-    if (data?.text != null && data!.text!.isNotEmpty) {
-      setState(() {
-        _importController.text = data.text!;
-        _feedbackMessage = null;
-      });
-    }
-  }
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/$fileName');
+      await file.writeAsString(jsonText);
 
-  Future<void> _handleImport({required bool replace}) async {
-    final text = _importController.text.trim();
-    if (text.isEmpty) {
-      setState(() {
-        _feedbackMessage = 'Please paste backup JSON into the input area first.';
-        _isFeedbackSuccess = false;
-      });
-      return;
-    }
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: 'Vord Session Backup',
+        text: 'Vord backup archive: $fileName',
+      );
 
-    if (replace) {
-      final confirmed = await _showReplaceConfirmDialog();
-      if (!confirmed) return;
-    }
-
-    SoundService.playTapeTransportLatch();
-    final result = await widget.sessionService.importBackupJson(text, replace: replace);
-
-    setState(() {
-      _feedbackMessage = result.message;
-      _isFeedbackSuccess = result.success;
-      if (result.success) {
-        _importController.clear();
+      if (mounted) {
+        setState(() {
+          _statusMessage = 'Exported file: $fileName';
+          _isSuccess = true;
+          _isLoading = false;
+        });
       }
-    });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _statusMessage = 'Export failed: $e';
+          _isSuccess = false;
+          _isLoading = false;
+        });
+      }
+    }
   }
 
-  Future<bool> _showReplaceConfirmDialog() async {
+  Future<void> _handleRestoreFile() async {
+    setState(() {
+      _isLoading = true;
+      _statusMessage = null;
+    });
+
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+      );
+
+      if (result == null || result.files.isEmpty) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final pickedFile = result.files.first;
+      String content;
+
+      if (pickedFile.bytes != null) {
+        content = String.fromCharCodes(pickedFile.bytes!);
+      } else if (pickedFile.path != null) {
+        content = await File(pickedFile.path!).readAsString();
+      } else {
+        throw Exception('Cannot read picked file data.');
+      }
+
+      if (!mounted) return;
+
+      final replace = await _showImportModeDialog();
+      if (replace == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final importResult = await widget.sessionService.importBackupJson(content, replace: replace);
+
+      if (mounted) {
+        setState(() {
+          _statusMessage = importResult.message;
+          _isSuccess = importResult.success;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _statusMessage = 'Restore failed: $e';
+          _isSuccess = false;
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<bool?> _showImportModeDialog() async {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final result = await showDialog<bool>(
+    return showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.lightBackground,
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         title: Text(
-          'OVERWRITE ALL DATA?',
+          'RESTORE SESSIONS',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w800,
@@ -116,7 +149,7 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
           ),
         ),
         content: Text(
-          'This will delete all current sessions on this device and replace them with the imported archive. This action cannot be reversed.',
+          'How would you like to restore sessions from this file?',
           style: TextStyle(
             fontSize: 12,
             color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
@@ -124,7 +157,7 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
+            onPressed: () => Navigator.pop(ctx, null),
             child: Text(
               'CANCEL',
               style: TextStyle(
@@ -134,9 +167,19 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
             ),
           ),
           TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              'MERGE',
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                color: isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57),
+              ),
+            ),
+          ),
+          TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text(
-              'OVERWRITE',
+              'OVERWRITE ALL',
               style: TextStyle(
                 fontWeight: FontWeight.w800,
                 color: Color(0xFFE5534B),
@@ -146,11 +189,9 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
         ],
       ),
     );
-    return result ?? false;
   }
 
   Future<void> _handleClearAll() async {
-    SoundService.playTapeSwitchClick();
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -201,11 +242,10 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
     );
 
     if (confirmed == true) {
-      SoundService.playTapeTransportLatch();
       await widget.sessionService.clearAllSessions();
       setState(() {
-        _feedbackMessage = 'All session archives have been cleared.';
-        _isFeedbackSuccess = true;
+        _statusMessage = 'All session archives have been wiped.';
+        _isSuccess = true;
       });
     }
   }
@@ -231,7 +271,7 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. Razor-Sharp Header
+            // 1. Header
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
               decoration: BoxDecoration(
@@ -246,10 +286,7 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
                     width: 44,
                     height: 38,
                     child: PhysicalMatteButton(
-                      onTap: () {
-                        SoundService.playTapeSwitchClick();
-                        Navigator.pop(context);
-                      },
+                      onTap: () => Navigator.pop(context),
                       borderRadius: 0.0,
                       child: Center(
                         child: Icon(
@@ -261,42 +298,27 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
                     ),
                   ),
                   const SizedBox(width: 14),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'DATA & BACKUP ARCHIVE',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.8,
-                          color: textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'JSON EXPORT, IMPORT & STORAGE',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1.2,
-                          color: textSecondary,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    'DATA & BACKUP',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.8,
+                      color: textPrimary,
+                    ),
                   ),
                 ],
               ),
             ),
 
-            // 2. Scrollable Content Area
+            // 2. Content Area
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // A. Archive Readout Metrics Bar
+                    // A. Metrics Bar
                     Container(
                       padding: const EdgeInsets.all(14.0),
                       decoration: BoxDecoration(
@@ -419,18 +441,18 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 20),
 
-                    // Feedback Banner (If any)
-                    if (_feedbackMessage != null) ...[
+                    // Status Message Banner
+                    if (_statusMessage != null) ...[
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
+                        padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0),
                         decoration: BoxDecoration(
-                          color: _isFeedbackSuccess
+                          color: _isSuccess
                               ? (isDark ? const Color(0xFF1B2E24) : const Color(0xFFE9F5ED))
                               : (isDark ? const Color(0xFF3B1E1E) : const Color(0xFFFBEAEA)),
                           border: Border.all(
-                            color: _isFeedbackSuccess
+                            color: _isSuccess
                                 ? (isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57))
                                 : const Color(0xFFE5534B),
                             width: 1.5,
@@ -439,18 +461,18 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
                         child: Row(
                           children: [
                             Icon(
-                              _isFeedbackSuccess ? Icons.check_circle_outline : Icons.error_outline,
+                              _isSuccess ? Icons.check_circle_outline : Icons.error_outline,
                               size: 18,
-                              color: _isFeedbackSuccess
+                              color: _isSuccess
                                   ? (isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57))
                                   : const Color(0xFFE5534B),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                _feedbackMessage!,
+                                _statusMessage!,
                                 style: TextStyle(
-                                  fontSize: 11.5,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   color: textPrimary,
                                 ),
@@ -459,261 +481,87 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 20),
                     ],
 
-                    // B. EXPORT BACKUP SECTION
-                    Text(
-                      'BACKUP EXPORT',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.5,
-                        color: textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: SizedBox(
-                            height: 48,
-                            child: PhysicalMatteButton(
-                              onTap: _handleCopyBackup,
-                              borderRadius: 0.0,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.copy_rounded,
-                                    size: 16,
-                                    color: isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'COPY BACKUP JSON',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 1.0,
-                                      color: textPrimary,
-                                    ),
-                                  ),
-                                ],
+                    // B. FILE EXPORT BUTTON
+                    SizedBox(
+                      height: 52,
+                      child: PhysicalMatteButton(
+                        onTap: _isLoading ? () {} : _handleExportFile,
+                        borderRadius: 0.0,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.upload_file_rounded,
+                              size: 20,
+                              color: isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              'EXPORT BACKUP FILE',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.0,
+                                color: textPrimary,
                               ),
                             ),
-                          ),
+                          ],
                         ),
-                        const SizedBox(width: 10),
-                        SizedBox(
-                          height: 48,
-                          child: PhysicalMatteButton(
-                            onTap: () {
-                              SoundService.playTapeSwitchClick();
-                              setState(() => _showPreview = !_showPreview);
-                            },
-                            borderRadius: 0.0,
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                            child: Icon(
-                              _showPreview ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                              size: 18,
-                              color: textSecondary,
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
 
-                    if (_showPreview) ...[
-                      const SizedBox(height: 10),
-                      Container(
-                        padding: const EdgeInsets.all(12.0),
-                        constraints: const BoxConstraints(maxHeight: 180),
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF0F1114) : const Color(0xFFECEFF3),
-                          border: Border.all(color: borderCol, width: 1.2),
-                        ),
-                        child: SingleChildScrollView(
-                          child: SelectableText(
-                            widget.sessionService.exportBackupJson(),
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 11,
-                              color: isDark ? const Color(0xFF3FA36C) : const Color(0xFF1E7B44),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    const SizedBox(height: 12),
 
-                    const SizedBox(height: 24),
-
-                    // C. IMPORT & RESTORE SECTION
-                    Text(
-                      'BACKUP IMPORT & RESTORE',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.5,
-                        color: textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    Container(
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF111316) : const Color(0xFFF9FAFB),
-                        border: Border.all(color: borderCol, width: 1.5),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          TextField(
-                            controller: _importController,
-                            maxLines: 4,
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 11,
+                    // C. FILE IMPORT BUTTON
+                    SizedBox(
+                      height: 52,
+                      child: PhysicalMatteButton(
+                        onTap: _isLoading ? () {} : _handleRestoreFile,
+                        borderRadius: 0.0,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.file_download_outlined,
+                              size: 20,
                               color: textPrimary,
                             ),
-                            decoration: InputDecoration(
-                              hintText: 'Paste backup JSON archive here...',
-                              hintStyle: TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 11,
-                                color: textSecondary.withAlpha(140),
+                            const SizedBox(width: 10),
+                            Text(
+                              'RESTORE FROM FILE',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.0,
+                                color: textPrimary,
                               ),
-                              contentPadding: const EdgeInsets.all(12.0),
-                              border: InputBorder.none,
                             ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF16191D) : const Color(0xFFEFF2F6),
-                              border: Border(top: BorderSide(color: borderCol, width: 1.0)),
-                            ),
-                            child: Row(
-                              children: [
-                                TextButton.icon(
-                                  onPressed: _handlePasteClipboard,
-                                  icon: Icon(Icons.paste_rounded, size: 14, color: textSecondary),
-                                  label: Text(
-                                    'PASTE CLIPBOARD',
-                                    style: TextStyle(
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 0.8,
-                                      color: textSecondary,
-                                    ),
-                                  ),
-                                ),
-                                const Spacer(),
-                                if (_importController.text.isNotEmpty)
-                                  TextButton(
-                                    onPressed: () {
-                                      SoundService.playTapeSwitchClick();
-                                      setState(() {
-                                        _importController.clear();
-                                        _feedbackMessage = null;
-                                      });
-                                    },
-                                    child: Text(
-                                      'CLEAR',
-                                      style: TextStyle(
-                                        fontSize: 10.5,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: 0.8,
-                                        color: textSecondary,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
 
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 32),
 
-                    Row(
-                      children: [
-                        Expanded(
-                          child: SizedBox(
-                            height: 46,
-                            child: PhysicalMatteButton(
-                              onTap: () => _handleImport(replace: false),
-                              borderRadius: 0.0,
-                              child: Center(
-                                child: Text(
-                                  'MERGE SESSIONS',
-                                  style: TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 1.0,
-                                    color: textPrimary,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: SizedBox(
-                            height: 46,
-                            child: PhysicalMatteButton(
-                              onTap: () => _handleImport(replace: true),
-                              borderRadius: 0.0,
-                              borderColor: const Color(0xFFE5534B).withAlpha(150),
-                              child: const Center(
-                                child: Text(
-                                  'OVERWRITE ALL',
-                                  style: TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 1.0,
-                                    color: Color(0xFFE5534B),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 28),
-
-                    // D. DATA MAINTENANCE / RESET
-                    Text(
-                      'DATA MAINTENANCE',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.5,
-                        color: textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
+                    // D. WIPE DATA BUTTON
                     SizedBox(
-                      height: 46,
+                      height: 48,
                       child: PhysicalMatteButton(
                         onTap: _handleClearAll,
                         borderRadius: 0.0,
-                        borderColor: const Color(0xFFE5534B),
+                        borderColor: const Color(0xFFE5534B).withAlpha(160),
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.delete_sweep_rounded, size: 18, color: Color(0xFFE5534B)),
                             SizedBox(width: 8),
                             Text(
-                              'CLEAR ALL RECORDED SESSIONS',
+                              'CLEAR ALL SESSIONS',
                               style: TextStyle(
-                                fontSize: 11.5,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 1.0,
                                 color: Color(0xFFE5534B),

@@ -48,12 +48,17 @@ class SoundService {
     } catch (_) {}
   }
 
+  static DateTime _lastPlayTime = DateTime.fromMillisecondsSinceEpoch(0);
+
   /// Heavy mechanical solenoid transport engagement sound (PLAY / STOP / RESTORE)
   static Future<void> playTapeTransportLatch() async {
+    final now = DateTime.now();
+    if (now.difference(_lastPlayTime).inMilliseconds < 80) return;
+    _lastPlayTime = now;
+
     if (hapticEnabled) {
       HapticFeedback.heavyImpact();
     }
-    SystemSound.play(SystemSoundType.click);
 
     if (!enableAudio || !soundEnabled) return;
     try {
@@ -61,16 +66,19 @@ class SoundService {
       await _latchPlayer?.stop();
       await _latchPlayer?.play(AssetSource('audio/tape_latch.wav'), volume: 1.0);
     } catch (_) {
-      // Graceful fallback for widget tests or devices with muted audio
+      // Graceful fallback
     }
   }
 
   /// Sharp mechanical switch click sound (MODE / SETTINGS / TABS)
   static Future<void> playTapeSwitchClick() async {
+    final now = DateTime.now();
+    if (now.difference(_lastPlayTime).inMilliseconds < 80) return;
+    _lastPlayTime = now;
+
     if (hapticEnabled) {
       HapticFeedback.lightImpact();
     }
-    SystemSound.play(SystemSoundType.click);
 
     if (!enableAudio || !soundEnabled) return;
     try {

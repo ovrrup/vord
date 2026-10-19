@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/session_mode.dart';
 import '../models/study_session.dart';
-import '../screens/data_backup_screen.dart';
 import '../services/session_service.dart';
 import '../services/sound_service.dart';
 import '../theme/app_theme.dart';
@@ -97,10 +96,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     width: 44,
                     height: 38,
                     child: PhysicalMatteButton(
-                      onTap: () {
-                        SoundService.playTapeSwitchClick();
-                        Navigator.pop(context);
-                      },
+                      onTap: () => Navigator.pop(context),
                       borderRadius: 0.0,
                       child: Center(
                         child: Icon(
@@ -112,54 +108,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     ),
                   ),
                   const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'SESSION LOG & HISTORY',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.8,
-                            color: textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'TAPE DECK RECORDER ARCHIVE',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1.2,
-                            color: textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Backup shortcut button in header
-                  SizedBox(
-                    width: 44,
-                    height: 38,
-                    child: PhysicalMatteButton(
-                      onTap: () {
-                        SoundService.playTapeSwitchClick();
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => DataBackupScreen(sessionService: widget.sessionService),
-                          ),
-                        ).then((_) => setState(() {}));
-                      },
-                      borderRadius: 0.0,
-                      child: Center(
-                        child: Icon(
-                          Icons.storage_rounded,
-                          size: 19,
-                          color: textPrimary,
-                        ),
-                      ),
+                  Text(
+                    'SESSION HISTORY',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.8,
+                      color: textPrimary,
                     ),
                   ),
                 ],
