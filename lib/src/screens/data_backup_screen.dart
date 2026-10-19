@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -51,10 +52,12 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
       final file = File('${tempDir.path}/$fileName');
       await file.writeAsString(jsonText);
 
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        subject: 'Vord Session Backup',
-        text: 'Vord backup archive: $fileName',
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          subject: 'Vord Session Backup',
+          text: 'Vord backup archive: $fileName',
+        ),
       );
 
       if (mounted) {
@@ -82,25 +85,15 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
     });
 
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.any,
-      );
+      final pickedFile = await FilePicker.pickFile();
 
-      if (result == null || result.files.isEmpty) {
+      if (pickedFile == null) {
         setState(() => _isLoading = false);
         return;
       }
 
-      final pickedFile = result.files.first;
-      String content;
-
-      if (pickedFile.bytes != null) {
-        content = String.fromCharCodes(pickedFile.bytes!);
-      } else if (pickedFile.path != null) {
-        content = await File(pickedFile.path!).readAsString();
-      } else {
-        throw Exception('Cannot read picked file data.');
-      }
+      final bytes = await pickedFile.readAsBytes();
+      final content = utf8.decode(bytes);
 
       if (!mounted) return;
 
