@@ -6,6 +6,7 @@ import 'package:vord/src/models/session_mode.dart';
 import 'package:vord/src/screens/history_screen.dart';
 import 'package:vord/src/services/session_service.dart';
 import 'package:vord/src/services/sound_service.dart';
+import 'package:vord/src/widgets/retro_matte_disk.dart';
 
 void main() {
   setUp(() {
@@ -23,7 +24,10 @@ void main() {
     expect(find.textContaining('Good '), findsOneWidget);
     expect(find.textContaining('Compete with yourself'), findsOneWidget);
 
-    // Component 2: Retro matte disk with ZERO digital time numbers
+    // Component 2: Squircle box deck with corner bolts, 4 box lights, and ZERO digital time numbers
+    expect(find.byKey(const Key('info_area_stage_lights')), findsOneWidget);
+    expect(find.byType(MachinedBolt), findsNWidgets(4));
+    expect(find.byType(StageBoxLight), findsNWidgets(4));
     expect(find.text('00:00'), findsNothing);
 
     // Component 3: Physical matte controls (Play, Mode Switch, Settings)
@@ -215,5 +219,137 @@ void main() {
     expect(sessionService.totalSessionCount, 2);
     expect(sessionService.allTimeFocusSeconds, 1800);
     expect(sessionService.allTimeBreakSeconds, 300);
+  });
+
+  testWidgets('Squircle deck 4 box lights only illuminate when decided milestone times are up', (WidgetTester tester) async {
+    // Stage thresholds with baseline = 1000s, extra3 = 100s, extra4 = 200s:
+    // T1 = 700s, T2 = 1000s, T3 = 1100s, T4 = 1300s
+    await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(
+        body: RetroMatteDisk(
+          elapsedSeconds: 0,
+          isRunning: true,
+          isFocusMode: true,
+          animate: false,
+          baselineSeconds: 1000,
+          extra3Seconds: 100,
+          extra4Seconds: 200,
+        ),
+      ),
+    ));
+
+    // Initially (t = 0), all 4 lights are unlit
+    expect(tester.widget<StageBoxLight>(find.byKey(const Key('box_light_1'))).isLit, isFalse);
+    expect(tester.widget<StageBoxLight>(find.byKey(const Key('box_light_2'))).isLit, isFalse);
+    expect(tester.widget<StageBoxLight>(find.byKey(const Key('box_light_3'))).isLit, isFalse);
+    expect(tester.widget<StageBoxLight>(find.byKey(const Key('box_light_4'))).isLit, isFalse);
+
+    // At t = 699s (before T1=700s): all still unlit
+    await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(
+        body: RetroMatteDisk(
+          elapsedSeconds: 699,
+          isRunning: true,
+          isFocusMode: true,
+          animate: false,
+          baselineSeconds: 1000,
+          extra3Seconds: 100,
+          extra4Seconds: 200,
+        ),
+      ),
+    ));
+    expect(tester.widget<StageBoxLight>(find.byKey(const Key('box_light_1'))).isLit, isFalse);
+
+    // At t = 700s (T1 reached): Light 1 glows
+    await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(
+        body: RetroMatteDisk(
+          elapsedSeconds: 700,
+          isRunning: true,
+          isFocusMode: true,
+          animate: false,
+          baselineSeconds: 1000,
+          extra3Seconds: 100,
+          extra4Seconds: 200,
+        ),
+      ),
+    ));
+    expect(tester.widget<StageBoxLight>(find.byKey(const Key('box_light_1'))).isLit, isTrue);
+    expect(tester.widget<StageBoxLight>(find.byKey(const Key('box_light_2'))).isLit, isFalse);
+
+    // At t = 1000s (T2 baseline reached): Lights 1 and 2 glow
+    await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(
+        body: RetroMatteDisk(
+          elapsedSeconds: 1000,
+          isRunning: true,
+          isFocusMode: true,
+          animate: false,
+          baselineSeconds: 1000,
+          extra3Seconds: 100,
+          extra4Seconds: 200,
+        ),
+      ),
+    ));
+    expect(tester.widget<StageBoxLight>(find.byKey(const Key('box_light_1'))).isLit, isTrue);
+    expect(tester.widget<StageBoxLight>(find.byKey(const Key('box_light_2'))).isLit, isTrue);
+    expect(tester.widget<StageBoxLight>(find.byKey(const Key('box_light_3'))).isLit, isFalse);
+
+    // At t = 1100s (T3 reached): Lights 1, 2, and 3 glow
+    await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(
+        body: RetroMatteDisk(
+          elapsedSeconds: 1100,
+          isRunning: true,
+          isFocusMode: true,
+          animate: false,
+          baselineSeconds: 1000,
+          extra3Seconds: 100,
+          extra4Seconds: 200,
+        ),
+      ),
+    ));
+    expect(tester.widget<StageBoxLight>(find.byKey(const Key('box_light_1'))).isLit, isTrue);
+    expect(tester.widget<StageBoxLight>(find.byKey(const Key('box_light_2'))).isLit, isTrue);
+    expect(tester.widget<StageBoxLight>(find.byKey(const Key('box_light_3'))).isLit, isTrue);
+    expect(tester.widget<StageBoxLight>(find.byKey(const Key('box_light_4'))).isLit, isFalse);
+
+    // At t = 1300s (T4 surpassed): All 4 lights glow
+    await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(
+        body: RetroMatteDisk(
+          elapsedSeconds: 1300,
+          isRunning: true,
+          isFocusMode: true,
+          animate: false,
+          baselineSeconds: 1000,
+          extra3Seconds: 100,
+          extra4Seconds: 200,
+        ),
+      ),
+    ));
+    expect(tester.widget<StageBoxLight>(find.byKey(const Key('box_light_1'))).isLit, isTrue);
+    expect(tester.widget<StageBoxLight>(find.byKey(const Key('box_light_2'))).isLit, isTrue);
+    expect(tester.widget<StageBoxLight>(find.byKey(const Key('box_light_3'))).isLit, isTrue);
+    expect(tester.widget<StageBoxLight>(find.byKey(const Key('box_light_4'))).isLit, isTrue);
+
+    // In Rest mode, lights remain unlit even with high elapsedSeconds
+    await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(
+        body: RetroMatteDisk(
+          elapsedSeconds: 1300,
+          isRunning: true,
+          isFocusMode: false, // Rest mode
+          animate: false,
+          baselineSeconds: 1000,
+          extra3Seconds: 100,
+          extra4Seconds: 200,
+        ),
+      ),
+    ));
+    expect(tester.widget<StageBoxLight>(find.byKey(const Key('box_light_1'))).isLit, isFalse);
+    expect(tester.widget<StageBoxLight>(find.byKey(const Key('box_light_2'))).isLit, isFalse);
+    expect(tester.widget<StageBoxLight>(find.byKey(const Key('box_light_3'))).isLit, isFalse);
+    expect(tester.widget<StageBoxLight>(find.byKey(const Key('box_light_4'))).isLit, isFalse);
   });
 }

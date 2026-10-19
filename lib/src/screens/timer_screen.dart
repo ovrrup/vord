@@ -159,7 +159,7 @@ class _TimerScreenState extends State<TimerScreen> {
                 isPaused: false,
               ),
 
-              // Component 2: Big solid realistic matte disk with concentric rings countdown
+              // Component 2: Squircle deck housing rotating spool disk, corner bolts, and 4 box lights
               Expanded(
                 child: Center(
                   child: RetroMatteDisk(

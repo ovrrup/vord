@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import '../theme/app_theme.dart';
 
-/// Component 2: A big, solid realistic matte tape-recorder spool disk.
-/// Instead of a continuous color spread, concentric rings of that stage's color
-/// appear one after another for clear, highly visible countdowns and milestone indication.
-/// Features authentic mechanical rotational inertia (spin-up acceleration and braking friction).
+/// Component 2: A squircle box housing the rotating matte tape spool disk,
+/// featuring precision machined flush corner bolts, and a top-right info area
+/// containing 4 rectangular box lights representing the milestone stages.
+/// The box lights only illuminate when their decided milestone time is up.
 class RetroMatteDisk extends StatefulWidget {
   final int elapsedSeconds;
   final bool isRunning;
@@ -114,41 +114,110 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Generous, large disk size that fills the available center area
+        // Comfortable, balanced squircle box sizing that fits available center space
         final availableSize = math.min(constraints.maxWidth, constraints.maxHeight);
-        final diameter = math.min(availableSize * 0.94, 350.0);
+        final boxSize = math.min(availableSize * 0.96, 360.0);
+        final diskDiameter = boxSize * 0.74;
 
         return Container(
-          width: diameter,
-          height: diameter,
+          width: boxSize,
+          height: boxSize,
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
+            color: isDark ? const Color(0xFF15181C) : const Color(0xFFF4F6F9),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: isDark ? const Color(0xFF262C34) : const Color(0xFFD6DCE4),
+              width: 1.5,
+            ),
             boxShadow: [
-              // Deep, realistic physical drop shadows giving solid 3D elevation
               BoxShadow(
-                color: isDark ? const Color(0x80000000) : const Color(0x24000000),
-                blurRadius: 30,
-                offset: const Offset(0, 16),
-                spreadRadius: 2,
+                color: isDark ? const Color(0x60000000) : const Color(0x18000000),
+                blurRadius: 24,
+                offset: const Offset(0, 12),
+                spreadRadius: -4,
               ),
               BoxShadow(
-                color: isDark ? const Color(0x40000000) : const Color(0x12000000),
-                blurRadius: 10,
+                color: isDark ? const Color(0x30000000) : const Color(0x0C000000),
+                blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
-          child: CustomPaint(
-            size: Size(diameter, diameter),
-            painter: _ConcentricRingsSpoolPainter(
-              elapsedSeconds: widget.elapsedSeconds,
-              rotationAngle: _rotationAngle,
-              isDark: isDark,
-              isFocusMode: widget.isFocusMode,
-              baselineSeconds: widget.baselineSeconds,
-              extra3Seconds: widget.extra3Seconds,
-              extra4Seconds: widget.extra4Seconds,
-            ),
+          child: Stack(
+            children: [
+              // 1. Recessed Platter Well with Rotating Matte Tape Spool Disk
+              Center(
+                child: Container(
+                  width: diskDiameter,
+                  height: diskDiameter,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: isDark ? const Color(0x60000000) : const Color(0x18000000),
+                        blurRadius: 16,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: CustomPaint(
+                    size: Size(diskDiameter, diskDiameter),
+                    painter: _RetroSpoolPainter(
+                      rotationAngle: _rotationAngle,
+                      isDark: isDark,
+                    ),
+                  ),
+                ),
+              ),
+
+              // 2. Machined Flush Screws/Bolts at the 4 corners of the squircle plate
+              Positioned(
+                top: 13,
+                left: 13,
+                child: MachinedBolt(
+                  slotAngle: 0.65, // ~37°
+                  isDark: isDark,
+                ),
+              ),
+              Positioned(
+                top: 13,
+                right: 13,
+                child: MachinedBolt(
+                  slotAngle: 1.95, // ~112°
+                  isDark: isDark,
+                ),
+              ),
+              Positioned(
+                bottom: 13,
+                left: 13,
+                child: MachinedBolt(
+                  slotAngle: 1.12, // ~64°
+                  isDark: isDark,
+                ),
+              ),
+              Positioned(
+                bottom: 13,
+                right: 13,
+                child: MachinedBolt(
+                  slotAngle: 2.58, // ~148°
+                  isDark: isDark,
+                ),
+              ),
+
+              // 3. Top-Right Info Area: 4 Box Lights indicating milestone stages
+              Positioned(
+                top: 12,
+                right: 34,
+                child: TopRightInfoPanel(
+                  elapsedSeconds: widget.elapsedSeconds,
+                  isFocusMode: widget.isFocusMode,
+                  isDark: isDark,
+                  baselineSeconds: widget.baselineSeconds,
+                  extra3Seconds: widget.extra3Seconds,
+                  extra4Seconds: widget.extra4Seconds,
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -156,23 +225,36 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
   }
 }
 
-class _ConcentricRingsSpoolPainter extends CustomPainter {
-  final int elapsedSeconds;
-  final double rotationAngle;
+/// Precision-machined flush chassis screw/bolt.
+class MachinedBolt extends StatelessWidget {
+  final double slotAngle;
   final bool isDark;
-  final bool isFocusMode;
-  final int baselineSeconds;
-  final int extra3Seconds;
-  final int extra4Seconds;
 
-  _ConcentricRingsSpoolPainter({
-    required this.elapsedSeconds,
-    required this.rotationAngle,
+  const MachinedBolt({
+    super.key,
+    required this.slotAngle,
     required this.isDark,
-    required this.isFocusMode,
-    required this.baselineSeconds,
-    required this.extra3Seconds,
-    required this.extra4Seconds,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: const Size(14, 14),
+      painter: _MachinedBoltPainter(
+        slotAngle: slotAngle,
+        isDark: isDark,
+      ),
+    );
+  }
+}
+
+class _MachinedBoltPainter extends CustomPainter {
+  final double slotAngle;
+  final bool isDark;
+
+  const _MachinedBoltPainter({
+    required this.slotAngle,
+    required this.isDark,
   });
 
   @override
@@ -180,17 +262,289 @@ class _ConcentricRingsSpoolPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
 
-    // 1. Draw Solid Matte Base Disk Face
+    // Outer recessed counterbore
+    final holePaint = Paint()
+      ..color = isDark ? const Color(0xFF0C0E11) : const Color(0xFFDCE2E9)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, radius, holePaint);
+
+    // Inner screw head
+    final headRadius = radius * 0.80;
+    final headPaint = Paint()
+      ..color = isDark ? const Color(0xFF2C323A) : const Color(0xFFCAD1DA)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, headRadius, headPaint);
+
+    // Screw head bevel border
+    final borderPaint = Paint()
+      ..color = isDark ? const Color(0xFF3F4854) : const Color(0xFFB5BDC7)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    canvas.drawCircle(center, headRadius, borderPaint);
+
+    // Precision screw drive slot
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(slotAngle);
+
+    final slotPaint = Paint()
+      ..color = isDark ? const Color(0xFF101316) : const Color(0xFF7E8794)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4
+      ..strokeCap = StrokeCap.square;
+    canvas.drawLine(Offset(-radius * 0.52, 0), Offset(radius * 0.52, 0), slotPaint);
+
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _MachinedBoltPainter oldDelegate) {
+    return oldDelegate.slotAngle != slotAngle || oldDelegate.isDark != isDark;
+  }
+}
+
+/// Top-right info panel housing 4 horizontal box lights representing the milestone stages.
+class TopRightInfoPanel extends StatelessWidget {
+  final int elapsedSeconds;
+  final bool isFocusMode;
+  final bool isDark;
+  final int baselineSeconds;
+  final int extra3Seconds;
+  final int extra4Seconds;
+
+  const TopRightInfoPanel({
+    super.key,
+    required this.elapsedSeconds,
+    required this.isFocusMode,
+    required this.isDark,
+    required this.baselineSeconds,
+    required this.extra3Seconds,
+    required this.extra4Seconds,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final b = baselineSeconds > 0 ? baselineSeconds : 1200;
+    final t1 = (b * 0.70).round().clamp(60, b - 30);
+    final t2 = b;
+    final t3 = t2 + (extra3Seconds > 0 ? extra3Seconds : 180);
+    final t4 = t3 + (extra4Seconds > 0 ? extra4Seconds : 240);
+
+    // The lights ONLY glow when their decided milestone time is up
+    final isActive = isFocusMode && elapsedSeconds > 0;
+    final stage1Lit = isActive && elapsedSeconds >= t1;
+    final stage2Lit = isActive && elapsedSeconds >= t2;
+    final stage3Lit = isActive && elapsedSeconds >= t3;
+    final stage4Lit = isActive && elapsedSeconds >= t4;
+
+    return Container(
+      key: const Key('info_area_stage_lights'),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3.5),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0F1114) : const Color(0xFFE5EAF0),
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(
+          color: isDark ? const Color(0xFF222830) : const Color(0xFFCAD1DA),
+          width: 1.0,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          StageBoxLight(
+            key: const Key('box_light_1'),
+            index: 1,
+            isLit: stage1Lit,
+            isDark: isDark,
+          ),
+          const SizedBox(width: 4),
+          StageBoxLight(
+            key: const Key('box_light_2'),
+            index: 2,
+            isLit: stage2Lit,
+            isDark: isDark,
+          ),
+          const SizedBox(width: 4),
+          StageBoxLight(
+            key: const Key('box_light_3'),
+            index: 3,
+            isLit: stage3Lit,
+            isDark: isDark,
+          ),
+          const SizedBox(width: 4),
+          StageBoxLight(
+            key: const Key('box_light_4'),
+            index: 4,
+            isLit: stage4Lit,
+            isDark: isDark,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A single rectangular box light representing a stage milestone.
+class StageBoxLight extends StatelessWidget {
+  final int index; // 1, 2, 3, 4
+  final bool isLit;
+  final bool isDark;
+
+  const StageBoxLight({
+    super.key,
+    required this.index,
+    required this.isLit,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color fillColor;
+    final Color borderColor;
+    final List<BoxShadow> shadows;
+
+    if (!isLit) {
+      fillColor = isDark ? const Color(0xFF14171A) : const Color(0xFFF0F3F6);
+      borderColor = isDark ? const Color(0xFF242A32) : const Color(0xFFD0D7DE);
+      shadows = const [];
+    } else if (isDark) {
+      switch (index) {
+        case 1:
+          fillColor = AppTheme.darkStage1; // #1B2E24 Deep Emerald
+          borderColor = const Color(0xFF2E6347);
+          shadows = const [
+            BoxShadow(
+              color: Color(0x801B2E24),
+              blurRadius: 6,
+              spreadRadius: 1,
+            ),
+          ];
+          break;
+        case 2:
+          fillColor = AppTheme.darkStage2; // #28593D Muted Moss
+          borderColor = const Color(0xFF3FA36C);
+          shadows = const [
+            BoxShadow(
+              color: Color(0x9028593D),
+              blurRadius: 7,
+              spreadRadius: 1,
+            ),
+          ];
+          break;
+        case 3:
+          fillColor = AppTheme.darkStage3; // #3FA36C Vibrant Leaf Green
+          borderColor = const Color(0xFF5AD491);
+          shadows = const [
+            BoxShadow(
+              color: Color(0xB03FA36C),
+              blurRadius: 8,
+              spreadRadius: 1.5,
+            ),
+          ];
+          break;
+        case 4:
+        default:
+          fillColor = const Color(0xFF52D18D); // Luminescent Emerald Surge
+          borderColor = const Color(0xFF7EFFBA);
+          shadows = const [
+            BoxShadow(
+              color: Color(0xD052D18D),
+              blurRadius: 10,
+              spreadRadius: 2,
+            ),
+          ];
+          break;
+      }
+    } else {
+      // White Mode
+      switch (index) {
+        case 1:
+          fillColor = const Color(0xFFD4EBD9); // Mint Tint
+          borderColor = const Color(0xFFA3D4B1);
+          shadows = const [
+            BoxShadow(
+              color: Color(0x60A8D5BA),
+              blurRadius: 5,
+              spreadRadius: 1,
+            ),
+          ];
+          break;
+        case 2:
+          fillColor = AppTheme.lightStage2; // #A8D5BA Soft Sage
+          borderColor = const Color(0xFF67B583);
+          shadows = const [
+            BoxShadow(
+              color: Color(0x80A8D5BA),
+              blurRadius: 6,
+              spreadRadius: 1,
+            ),
+          ];
+          break;
+        case 3:
+          fillColor = const Color(0xFF3FA36C); // Vibrant Leaf Green
+          borderColor = const Color(0xFF2E8B57);
+          shadows = const [
+            BoxShadow(
+              color: Color(0x903FA36C),
+              blurRadius: 7,
+              spreadRadius: 1.5,
+            ),
+          ];
+          break;
+        case 4:
+        default:
+          fillColor = AppTheme.lightStage3; // #2E8B57 Pleasant Forest Green
+          borderColor = const Color(0xFF1B633B);
+          shadows = const [
+            BoxShadow(
+              color: Color(0xB02E8B57),
+              blurRadius: 8,
+              spreadRadius: 2,
+            ),
+          ];
+          break;
+      }
+    }
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+      width: 13,
+      height: 9,
+      decoration: BoxDecoration(
+        color: fillColor,
+        borderRadius: BorderRadius.circular(2),
+        border: Border.all(color: borderColor, width: 1.0),
+        boxShadow: shadows,
+      ),
+    );
+  }
+}
+
+/// Clean, mechanical rotating matte spool painter.
+/// Pure reel mechanics with zero color rings drawn on the spool face itself.
+class _RetroSpoolPainter extends CustomPainter {
+  final double rotationAngle;
+  final bool isDark;
+
+  _RetroSpoolPainter({
+    required this.rotationAngle,
+    required this.isDark,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+
+    // 1. Solid Matte Base Disk Face
     final baseColor = isDark ? const Color(0xFF141619) : const Color(0xFFF2F5F8);
     final diskPaint = Paint()
       ..color = baseColor
       ..style = PaintingStyle.fill;
     canvas.drawCircle(center, radius - 2, diskPaint);
 
-    // 2. Draw Concentric Rings that appear one after another as countdown/milestones
-    _drawConcentricRings(canvas, center, radius);
-
-    // 3. Draw Rotating Tape Spool Mechanics (Cutout windows, spoke ribs, center hub)
+    // 2. Rotating Tape Spool Mechanics (Cutout windows, spoke ribs, center hub)
     canvas.save();
     canvas.translate(center.dx, center.dy);
     canvas.rotate(rotationAngle);
@@ -199,87 +553,19 @@ class _ConcentricRingsSpoolPainter extends CustomPainter {
 
     canvas.restore();
 
-    // 4. Solid Precision-Machined Outer Casing Rim
+    // 3. Precision-Machined Outer Casing Rim
     final outerRimPaint = Paint()
       ..color = isDark ? const Color(0xFF2C323B) : const Color(0xFFCAD1DA)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5;
     canvas.drawCircle(center, radius - 2, outerRimPaint);
 
-    // Subtle inner bevel shadow for recessed physical depth
+    // Inner bevel shadow for recessed physical depth
     final innerBevelPaint = Paint()
       ..color = isDark ? const Color(0x35000000) : const Color(0x16000000)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3.5;
     canvas.drawCircle(center, radius - 5, innerBevelPaint);
-  }
-
-  void _drawConcentricRings(Canvas canvas, Offset center, double radius) {
-    // 4 concentric annular rings:
-    // Ring 1 (innermost): radius 0.26R to 0.40R
-    // Ring 2 (mid-inner): radius 0.41R to 0.55R
-    // Ring 3 (mid-outer): radius 0.56R to 0.70R
-    // Ring 4 (outermost): radius 0.71R to 0.86R
-    final b = baselineSeconds > 0 ? baselineSeconds : 1200;
-    final t1 = (b * 0.70).round().clamp(60, b - 30);
-    final t2 = b;
-    final t3 = t2 + (extra3Seconds > 0 ? extra3Seconds : 180);
-    final t4 = t3 + (extra4Seconds > 0 ? extra4Seconds : 240);
-
-    // Palette Colors:
-    // Dark: #121212 -> #1B2E24 -> #28593D -> #3FA36C
-    // White: #FFFFFF -> #F2F9F3 -> #A8D5BA -> #2E8B57
-    final cUnlit = isDark ? const Color(0xFF181B1F) : const Color(0xFFE9EDF2);
-    final c1 = isDark ? AppTheme.darkStage1 : const Color(0xFFD6EFE0); // Mint/Emerald
-    final c2 = isDark ? AppTheme.darkStage2 : AppTheme.lightStage2;     // Muted Moss / Sage
-    final c3 = isDark ? AppTheme.darkStage3 : AppTheme.lightStage3;     // Leaf Green / Forest Green
-    final c4 = isDark ? const Color(0xFF4FD18B) : const Color(0xFF1E7B44); // Electric / Deep Green
-
-    final grooveColor = isDark ? const Color(0xFF282E37) : const Color(0xFFCBD2DA);
-
-    // Calculate ring activation states
-    // Ring 1: Active when t > 0
-    final ring1Active = isFocusMode && elapsedSeconds > 0;
-    final p1 = ring1Active ? (elapsedSeconds / t1).clamp(0.0, 1.0) : 0.0;
-
-    // Ring 2: Active when t >= t1
-    final ring2Active = isFocusMode && elapsedSeconds >= t1;
-    final p2 = ring2Active ? ((elapsedSeconds - t1) / (t2 - t1)).clamp(0.0, 1.0) : 0.0;
-
-    // Ring 3: Active when t >= t2 (Previous record surpassed!)
-    final ring3Active = isFocusMode && elapsedSeconds >= t2;
-    final p3 = ring3Active ? ((elapsedSeconds - t2) / (t3 - t2)).clamp(0.0, 1.0) : 0.0;
-
-    // Ring 4: Active when t >= t3 (Extending into new limit!)
-    final ring4Active = isFocusMode && elapsedSeconds >= t3;
-    final p4 = ring4Active ? ((elapsedSeconds - t3) / (t4 - t3)).clamp(0.0, 1.0) : 0.0;
-
-    final ringConfigs = [
-      _RingConfig(0.26 * radius, 0.40 * radius, ring1Active ? Color.lerp(cUnlit, c1, p1)! : cUnlit, ring1Active),
-      _RingConfig(0.41 * radius, 0.55 * radius, ring2Active ? Color.lerp(cUnlit, c2, p2)! : cUnlit, ring2Active),
-      _RingConfig(0.56 * radius, 0.70 * radius, ring3Active ? Color.lerp(cUnlit, c3, p3)! : cUnlit, ring3Active),
-      _RingConfig(0.71 * radius, 0.86 * radius, ring4Active ? Color.lerp(cUnlit, c4, p4)! : cUnlit, ring4Active),
-    ];
-
-    for (final rc in ringConfigs) {
-      final ringThickness = rc.outerR - rc.innerR;
-      final midRadius = (rc.innerR + rc.outerR) / 2;
-
-      // Draw concentric ring band
-      final paint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = ringThickness
-        ..color = rc.color;
-      canvas.drawCircle(center, midRadius, paint);
-
-      // Draw sharp concentric separator groove lines
-      final sepPaint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2
-        ..color = grooveColor;
-      canvas.drawCircle(center, rc.innerR, sepPaint);
-      canvas.drawCircle(center, rc.outerR, sepPaint);
-    }
   }
 
   void _drawSpoolMechanics(Canvas canvas, double radius) {
@@ -398,22 +684,8 @@ class _ConcentricRingsSpoolPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _ConcentricRingsSpoolPainter oldDelegate) {
-    return oldDelegate.elapsedSeconds != elapsedSeconds ||
-        oldDelegate.rotationAngle != rotationAngle ||
-        oldDelegate.isDark != isDark ||
-        oldDelegate.isFocusMode != isFocusMode ||
-        oldDelegate.baselineSeconds != baselineSeconds ||
-        oldDelegate.extra3Seconds != extra3Seconds ||
-        oldDelegate.extra4Seconds != extra4Seconds;
+  bool shouldRepaint(covariant _RetroSpoolPainter oldDelegate) {
+    return oldDelegate.rotationAngle != rotationAngle ||
+        oldDelegate.isDark != isDark;
   }
-}
-
-class _RingConfig {
-  final double innerR;
-  final double outerR;
-  final Color color;
-  final bool isActive;
-
-  const _RingConfig(this.innerR, this.outerR, this.color, this.isActive);
 }
