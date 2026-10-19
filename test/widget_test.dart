@@ -247,7 +247,7 @@ void main() {
   );
 
   testWidgets(
-    'Options info & updates navigates to InfoUpdatesScreen with interactive bay, action builds, and no-release state',
+    'Options info & updates navigates to InfoUpdatesScreen with clean author & repo showcase and updates bay',
     (WidgetTester tester) async {
       await tester.pumpWidget(
         const VordApp(
@@ -264,24 +264,19 @@ void main() {
       await tester.tap(find.text('INFO & UPDATES'));
       await tester.pumpAndSettle();
 
-      // Verify Machined Header
-      expect(find.text('SERVICE BAY // SPEC & UPDATES'), findsOneWidget);
+      // Verify Clean Header
+      expect(find.text('ABOUT & UPDATES'), findsOneWidget);
 
-      // Verify Interactive Reel Hub & Trigger Spin
-      expect(find.textContaining('TAP OR DRAG SPINDLE'), findsOneWidget);
-      await tester.tap(find.textContaining('TAP OR DRAG SPINDLE'));
-      await tester.pump();
+      // Verify Author Showcase
+      expect(find.text('AUTHOR & DEVELOPER'), findsOneWidget);
+      expect(find.text('ovrrup'), findsOneWidget);
+      expect(find.text('VISIT GITHUB PROFILE'), findsOneWidget);
+      expect(find.text('EXPLORE LUMIA (STUDY TRACKER)'), findsOneWidget);
 
-      // Verify Specification & Repository Info
-      expect(find.text('VORD'), findsOneWidget);
-      expect(find.text('v${UpdateService.currentVersion}'), findsOneWidget);
-      expect(find.text(UpdateService.repoOwner), findsOneWidget);
-      expect(
-        find.text(
-          'github.com/${UpdateService.repoOwner}/${UpdateService.repoName}',
-        ),
-        findsOneWidget,
-      );
+      // Verify Repository Showcase
+      expect(find.text('REPOSITORY & SOURCE CODE'), findsOneWidget);
+      expect(find.text('VIEW REPO'), findsOneWidget);
+      expect(find.text('STAR ON GITHUB'), findsOneWidget);
 
       // Test Interactive Copy Action
       await tester.ensureVisible(find.text('COPY'));
@@ -289,13 +284,6 @@ void main() {
       await tester.tap(find.text('COPY'));
       await tester.pump();
       expect(find.text('OWNER COPIED'), findsOneWidget);
-
-      // Test Hardware Telemetry Accordion
-      await tester.ensureVisible(find.text('HARDWARE TELEMETRY & SPECS'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('HARDWARE TELEMETRY & SPECS'));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('100% OFFLINE-FIRST'), findsOneWidget);
 
       // Verify Update Channel selection
       await tester.ensureVisible(find.text('OFFICIAL RELEASE'));
@@ -365,8 +353,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('DANGER: HIGH DATA LOSS RISK'), findsNothing);
 
-      await tester.ensureVisible(find.text('CHECK FOR OFFICIAL RELEASE'));
-      await tester.tap(find.text('CHECK FOR OFFICIAL RELEASE'));
+      await tester.ensureVisible(find.text('CHECK FOR UPDATES'));
+      await tester.tap(find.text('CHECK FOR UPDATES'));
       await tester.pumpAndSettle();
 
       expect(find.text('NO OFFICIAL RELEASES AVAILABLE'), findsOneWidget);

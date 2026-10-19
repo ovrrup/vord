@@ -65,6 +65,45 @@ jobs:
       - name: Compile Release APK
         run: flutter build apk --release
 
+      - name: Sign Release APK with Production Keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 || secrets.RELEASE_KEYSTORE }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || secrets.RELEASE_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS || secrets.ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "Decoding release signing keystore from secrets..."
+            echo "$KEYSTORE_BASE64" | base64 -d > release.jks
+            
+            APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner 2>/dev/null | sort -V | tail -n 1)
+            if [ -n "$APKSIGNER" ] && [ -f "$APKSIGNER" ]; then
+              echo "Signing APK with apksigner ($APKSIGNER)..."
+              $APKSIGNER sign --ks release.jks \
+                --ks-pass pass:"$KEYSTORE_PASSWORD" \
+                --ks-key-alias "$KEY_ALIAS" \
+                --key-pass pass:"$KEY_PASSWORD" \
+                --out build/app/outputs/flutter-apk/app-release-signed.apk \
+                build/app/outputs/flutter-apk/app-release.apk
+                
+              mv build/app/outputs/flutter-apk/app-release-signed.apk build/app/outputs/flutter-apk/app-release.apk
+              
+              echo "Verifying APK signature..."
+              $APKSIGNER verify --verbose build/app/outputs/flutter-apk/app-release.apk
+            else
+              echo "Fallback to jarsigner..."
+              jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+                -keystore release.jks -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" \
+                build/app/outputs/flutter-apk/app-release.apk "$KEY_ALIAS"
+              jarsigner -verify -verbose build/app/outputs/flutter-apk/app-release.apk
+            fi
+            
+            rm -f release.jks
+            echo "Release APK successfully signed and verified with production credentials."
+          else
+            echo "No signing keystore secret found, skipping signing."
+          fi
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
