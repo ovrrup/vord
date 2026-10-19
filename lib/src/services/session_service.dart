@@ -39,15 +39,16 @@ class SessionService extends ChangeNotifier {
   /// Initializes the local database, migrating from legacy storage if needed.
   Future<void> _initializeOfflineStorage() async {
     try {
-      // 1. Resolve local documents directory for atomic disk file
-      try {
-        final docsDir = await getApplicationDocumentsDirectory().timeout(
-          const Duration(milliseconds: 50),
-        );
-        _databaseFile = File('${docsDir.path}/$_dbFileName');
-        _backupFile = File('${docsDir.path}/$_backupFileName');
-      } catch (_) {
-        // Fallback for widget test environments where path_provider channels are unmocked
+      if (!Platform.environment.containsKey('FLUTTER_TEST')) {
+        try {
+          final docsDir = await getApplicationDocumentsDirectory();
+          _databaseFile = File('${docsDir.path}/$_dbFileName');
+          _backupFile = File('${docsDir.path}/$_backupFileName');
+        } catch (_) {
+          _databaseFile = null;
+          _backupFile = null;
+        }
+      } else {
         _databaseFile = null;
         _backupFile = null;
       }

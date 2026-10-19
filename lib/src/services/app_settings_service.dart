@@ -48,18 +48,24 @@ class AppSettingsService extends ChangeNotifier {
   String get updateChannel => _updateChannel;
   String? get lastInstalledCommitSha => _lastInstalledCommitSha;
 
+  // Enable atomic disk file storage (disabled during flutter test to avoid unmocked platform channels)
+  static bool enableDiskStorage = !Platform.environment.containsKey('FLUTTER_TEST');
+
   /// Initializes the storage engine, loading from disk, backup, or cache.
   Future<void> init() async {
     if (_isInitialized) return;
 
     try {
-      try {
-        final docsDir = await getApplicationDocumentsDirectory().timeout(
-          const Duration(milliseconds: 50),
-        );
-        _settingsFile = File('${docsDir.path}/$_settingsFileName');
-        _backupFile = File('${docsDir.path}/$_settingsBackupFileName');
-      } catch (_) {
+      if (enableDiskStorage) {
+        try {
+          final docsDir = await getApplicationDocumentsDirectory();
+          _settingsFile = File('${docsDir.path}/$_settingsFileName');
+          _backupFile = File('${docsDir.path}/$_settingsBackupFileName');
+        } catch (_) {
+          _settingsFile = null;
+          _backupFile = null;
+        }
+      } else {
         _settingsFile = null;
         _backupFile = null;
       }

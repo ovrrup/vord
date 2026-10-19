@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'app_settings_service.dart';
@@ -134,6 +135,7 @@ class BehaviourService extends ChangeNotifier {
 
   /// Applies the system UI overlay configuration to the device.
   Future<void> applySystemUiMode() async {
+    if (Platform.environment.containsKey('FLUTTER_TEST')) return;
     try {
       if (_hideStatusBar && _hideNavBar) {
         await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
