@@ -27,8 +27,8 @@ class TimerScreen extends StatefulWidget {
   State<TimerScreen> createState() => _TimerScreenState();
 }
 
-class _TimerScreenState extends State<TimerScreen> {
-  final SessionService _sessionService = SessionService();
+class _TimerScreenState extends State<TimerScreen> with WidgetsBindingObserver {
+  final SessionService _sessionService = SessionService.instance;
   final Stopwatch _stopwatch = Stopwatch();
   final math.Random _random = math.Random();
 
@@ -48,9 +48,62 @@ class _TimerScreenState extends State<TimerScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     SoundService.init();
     _behaviourService.addListener(_onBehaviourChanged);
     _behaviourService.applySystemUiMode();
+    _checkAndRestoreActiveSession();
+  }
+
+  Future<void> _checkAndRestoreActiveSession() async {
+    await _sessionService.ready;
+    final active = await _sessionService.loadActiveSession();
+    if (active == null || !mounted) return;
+
+    final elapsed = active.elapsedSeconds;
+    if (elapsed <= 0) return;
+
+    if (elapsed < 14400) {
+      setState(() {
+        _isFocusMode = active.modeType == SessionModeType.focus;
+        _baselineSeconds = active.baselineSeconds;
+        _extra3Seconds = active.extra3Seconds;
+        _extra4Seconds = active.extra4Seconds;
+        _elapsedSeconds = elapsed;
+        _isRunning = true;
+      });
+
+      _stopwatch.reset();
+      _stopwatch.start();
+      _ticker?.cancel();
+      _ticker = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (!mounted) {
+          timer.cancel();
+          return;
+        }
+        setState(() {
+          _elapsedSeconds = active.elapsedSeconds;
+        });
+      });
+    } else {
+      await _sessionService.recordSession(
+        active.modeType,
+        active.baselineSeconds,
+      );
+      await _sessionService.clearActiveSession();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _isRunning) {
+      final active = _sessionService.activeSession;
+      if (active != null && mounted) {
+        setState(() {
+          _elapsedSeconds = active.elapsedSeconds;
+        });
+      }
+    }
   }
 
   void _onBehaviourChanged() {
@@ -61,10 +114,10 @@ class _TimerScreenState extends State<TimerScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _behaviourService.removeListener(_onBehaviourChanged);
     _ticker?.cancel();
     _stopwatch.stop();
-    _sessionService.dispose();
     SoundService.dispose();
     super.dispose();
   }
@@ -86,6 +139,15 @@ class _TimerScreenState extends State<TimerScreen> {
       _isRunning = true;
     });
 
+    final now = DateTime.now();
+    _sessionService.saveActiveSession(
+      startTime: now,
+      modeType: _isFocusMode ? SessionModeType.focus : SessionModeType.shortBreak,
+      baselineSeconds: _baselineSeconds,
+      extra3Seconds: _extra3Seconds,
+      extra4Seconds: _extra4Seconds,
+    );
+
     _ticker = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
         timer.cancel();
@@ -100,6 +162,7 @@ class _TimerScreenState extends State<TimerScreen> {
   void _stopStopwatch() {
     _ticker?.cancel();
     _stopwatch.stop();
+    _sessionService.clearActiveSession();
 
     // Save session upon stop immediately
     if (_elapsedSeconds > 0) {
@@ -132,6 +195,7 @@ class _TimerScreenState extends State<TimerScreen> {
   void _toggleMode() {
     // If running when toggled, save session and reset
     if (_isRunning) {
+      _sessionService.clearActiveSession();
       if (_elapsedSeconds > 0) {
         if (_isFocusMode) {
           _sessionService.recordSession(SessionModeType.focus, _elapsedSeconds);

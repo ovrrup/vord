@@ -19,20 +19,48 @@ class SessionService extends ChangeNotifier {
   static const String _backupFileName = 'vord_offline_database.bak';
   static const int _currentSchemaVersion = 2;
 
+  static final SessionService instance = SessionService._internal();
+  factory SessionService() => instance;
+  SessionService._internal() {
+    init();
+  }
+
   final List<StudySession> _sessions = [];
   final Completer<void> _initCompleter = Completer<void>();
+  Future<void>? _initFuture;
   Future<void>? _activeWriteChain;
   bool _initialized = false;
   File? _databaseFile;
   File? _backupFile;
 
-  SessionService() {
-    _initializeOfflineStorage();
-  }
-
   /// Future that completes when the offline database is fully loaded into memory.
   Future<void> get ready => _initCompleter.future;
   bool get isInitialized => _initialized;
+
+  /// Initializes the local database with thread-safe idempotent execution.
+  Future<void> init({bool force = false}) {
+    if (_initialized && !force) return Future.value();
+    if (_initFuture != null && !force) return _initFuture!;
+    final completer = Completer<void>();
+    _initFuture = completer.future;
+
+    () async {
+      try {
+        await _initializeOfflineStorage();
+      } catch (e) {
+        debugPrint('SessionService init error: $e');
+      } finally {
+        _initialized = true;
+        if (!_initCompleter.isCompleted) {
+          _initCompleter.complete();
+        }
+        completer.complete();
+        notifyListeners();
+      }
+    }();
+
+    return _initFuture!;
+  }
 
   // Test mode flag
   static bool isTestMode = false;
@@ -186,17 +214,27 @@ class SessionService extends ChangeNotifier {
           await parentDir.create(recursive: true);
         }
 
-        // Create rolling safety backup of current database file
+        // Create rolling safety backup only if current database file is valid and non-empty
         if (await _databaseFile!.exists() && _backupFile != null) {
           try {
-            await _databaseFile!.copy(_backupFile!.path);
+            final len = await _databaseFile!.length();
+            if (len > 20) {
+              await _databaseFile!.copy(_backupFile!.path);
+            }
           } catch (_) {}
         }
 
-        // Atomic write via temp file
+        // Atomic write via temp file with flush
         final tmpFile = File('${_databaseFile!.path}.tmp');
         await tmpFile.writeAsString(jsonString, flush: true);
-        await tmpFile.rename(_databaseFile!.path);
+        try {
+          await tmpFile.rename(_databaseFile!.path);
+        } catch (_) {
+          if (await _databaseFile!.exists()) {
+            await _databaseFile!.delete();
+          }
+          await tmpFile.rename(_databaseFile!.path);
+        }
       }
 
       // 2. Secondary write to SharedPreferences cache
@@ -240,6 +278,7 @@ class SessionService extends ChangeNotifier {
   /// Records a completed session, guarantees non-zero duration,
   /// immediately updates in-memory state with 0ms latency, and queues atomic disk persistence.
   Future<StudySession?> recordSession(SessionModeType modeType, int durationSeconds) async {
+    await ready;
     if (durationSeconds <= 0) return null;
 
     final session = StudySession(
@@ -259,6 +298,7 @@ class SessionService extends ChangeNotifier {
 
   /// Permanently removes a session by ID and flushes changes to disk.
   Future<void> deleteSession(String id) async {
+    await ready;
     _sessions.removeWhere((s) => s.id == id);
     notifyListeners();
     await _queueDiskWrite();
@@ -266,6 +306,8 @@ class SessionService extends ChangeNotifier {
 
   /// Wipes all sessions while maintaining a pre-wipe internal recovery backup.
   Future<void> clearAllSessions() async {
+    await ready;
+    await _createPreWipeSnapshot();
     _sessions.clear();
     notifyListeners();
     await _queueDiskWrite();
@@ -462,7 +504,12 @@ class SessionService extends ChangeNotifier {
   /// If [replace] is true, replaces existing sessions;
   /// otherwise merges with intelligent deduplication based on both ID and session fingerprints.
   Future<BackupImportResult> importBackupJson(String jsonString, {bool replace = false}) async {
+    await ready;
     try {
+      if (replace) {
+        await _createPreWipeSnapshot();
+      }
+
       final decoded = jsonDecode(jsonString);
       if (decoded is! Map<String, dynamic>) {
         return const BackupImportResult(
@@ -565,6 +612,236 @@ class SessionService extends ChangeNotifier {
       );
     }
   }
+
+  // --- Pre-Wipe Safety Recovery Snapshot ---
+
+  static const String _preWipeSnapshotFileName = 'vord_pre_wipe_snapshot.json';
+  static const String _preWipePrefsKey = 'vord_pre_wipe_snapshot';
+
+  Future<void> _createPreWipeSnapshot() async {
+    if (_sessions.isEmpty) return;
+    try {
+      final jsonText = exportBackupJson();
+      if (!_inTest && _databaseFile != null) {
+        final backupDir = Directory('${_databaseFile!.parent.path}/backups');
+        if (!await backupDir.exists()) {
+          await backupDir.create(recursive: true);
+        }
+        final snapFile = File('${backupDir.path}/$_preWipeSnapshotFileName');
+        await snapFile.writeAsString(jsonText, flush: true);
+      }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_preWipePrefsKey, jsonText);
+    } catch (_) {}
+  }
+
+  Future<bool> hasPreWipeSnapshot() async {
+    try {
+      if (!_inTest && _databaseFile != null) {
+        final snapFile = File('${_databaseFile!.parent.path}/backups/$_preWipeSnapshotFileName');
+        if (await snapFile.exists()) return true;
+      }
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.containsKey(_preWipePrefsKey);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<BackupImportResult> restorePreWipeSnapshot() async {
+    try {
+      String? jsonContent;
+      if (!_inTest && _databaseFile != null) {
+        final snapFile = File('${_databaseFile!.parent.path}/backups/$_preWipeSnapshotFileName');
+        if (await snapFile.exists()) {
+          jsonContent = await snapFile.readAsString();
+        }
+      }
+      if (jsonContent == null || jsonContent.isEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        jsonContent = prefs.getString(_preWipePrefsKey);
+      }
+      if (jsonContent == null || jsonContent.isEmpty) {
+        return const BackupImportResult(
+          success: false,
+          importedCount: 0,
+          skippedCount: 0,
+          totalCount: 0,
+          message: 'No pre-wipe recovery snapshot found.',
+        );
+      }
+      return importBackupJson(jsonContent, replace: true);
+    } catch (e) {
+      return BackupImportResult(
+        success: false,
+        importedCount: 0,
+        skippedCount: 0,
+        totalCount: _sessions.length,
+        message: 'Recovery failed: $e',
+      );
+    }
+  }
+
+  // --- Local Persistent Backup Archive File Management ---
+
+  Future<File?> saveLocalBackupFile() async {
+    await ready;
+    try {
+      final jsonText = exportBackupJson();
+      final now = DateTime.now();
+      final timestamp =
+          '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+      final fileName = 'vord_backup_$timestamp.json';
+
+      Directory backupDir;
+      if (!_inTest && _databaseFile != null) {
+        backupDir = Directory('${_databaseFile!.parent.path}/backups');
+      } else {
+        final tempDir = Directory.systemTemp;
+        backupDir = Directory('${tempDir.path}/vord_backups');
+      }
+
+      if (!await backupDir.exists()) {
+        await backupDir.create(recursive: true);
+      }
+
+      final file = File('${backupDir.path}/$fileName');
+      await file.writeAsString(jsonText, flush: true);
+      return file;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<List<File>> getLocalBackupFiles() async {
+    try {
+      Directory backupDir;
+      if (!_inTest && _databaseFile != null) {
+        backupDir = Directory('${_databaseFile!.parent.path}/backups');
+      } else {
+        backupDir = Directory('${Directory.systemTemp.path}/vord_backups');
+      }
+
+      if (!await backupDir.exists()) return [];
+
+      final files = await backupDir
+          .list()
+          .where((e) =>
+              e is File &&
+              e.path.endsWith('.json') &&
+              !e.path.contains(_preWipeSnapshotFileName))
+          .cast<File>()
+          .toList();
+
+      files.sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
+      return files;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  // --- Active Timer Session Persistence ---
+
+  static const String _activeSessionStartKey = 'vord_active_session_start';
+  static const String _activeSessionModeKey = 'vord_active_session_mode';
+  static const String _activeSessionBaselineKey = 'vord_active_session_baseline';
+  static const String _activeSessionExtra3Key = 'vord_active_session_extra3';
+  static const String _activeSessionExtra4Key = 'vord_active_session_extra4';
+
+  ActiveSessionState? _activeSession;
+  ActiveSessionState? get activeSession => _activeSession;
+
+  Future<void> saveActiveSession({
+    required DateTime startTime,
+    required SessionModeType modeType,
+    required int baselineSeconds,
+    required int extra3Seconds,
+    required int extra4Seconds,
+  }) async {
+    _activeSession = ActiveSessionState(
+      startTime: startTime,
+      modeType: modeType,
+      baselineSeconds: baselineSeconds,
+      extra3Seconds: extra3Seconds,
+      extra4Seconds: extra4Seconds,
+    );
+    notifyListeners();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_activeSessionStartKey, startTime.toUtc().toIso8601String());
+      await prefs.setString(_activeSessionModeKey, modeType.name);
+      await prefs.setInt(_activeSessionBaselineKey, baselineSeconds);
+      await prefs.setInt(_activeSessionExtra3Key, extra3Seconds);
+      await prefs.setInt(_activeSessionExtra4Key, extra4Seconds);
+    } catch (_) {}
+  }
+
+  Future<ActiveSessionState?> loadActiveSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final rawStart = prefs.getString(_activeSessionStartKey);
+      if (rawStart == null) {
+        _activeSession = null;
+        return null;
+      }
+
+      final startTime = DateTime.parse(rawStart).toLocal();
+      final rawMode = prefs.getString(_activeSessionModeKey) ?? 'focus';
+      final modeType = SessionModeType.values.firstWhere(
+        (m) => m.name == rawMode,
+        orElse: () => SessionModeType.focus,
+      );
+      final baseline = prefs.getInt(_activeSessionBaselineKey) ?? 1200;
+      final extra3 = prefs.getInt(_activeSessionExtra3Key) ?? 180;
+      final extra4 = prefs.getInt(_activeSessionExtra4Key) ?? 240;
+
+      _activeSession = ActiveSessionState(
+        startTime: startTime,
+        modeType: modeType,
+        baselineSeconds: baseline,
+        extra3Seconds: extra3,
+        extra4Seconds: extra4,
+      );
+      return _activeSession;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> clearActiveSession() async {
+    _activeSession = null;
+    notifyListeners();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_activeSessionStartKey);
+      await prefs.remove(_activeSessionModeKey);
+      await prefs.remove(_activeSessionBaselineKey);
+      await prefs.remove(_activeSessionExtra3Key);
+      await prefs.remove(_activeSessionExtra4Key);
+    } catch (_) {}
+  }
+}
+
+/// Represents an ongoing timer session snapshot for process death recovery.
+class ActiveSessionState {
+  final DateTime startTime;
+  final SessionModeType modeType;
+  final int baselineSeconds;
+  final int extra3Seconds;
+  final int extra4Seconds;
+
+  const ActiveSessionState({
+    required this.startTime,
+    required this.modeType,
+    required this.baselineSeconds,
+    required this.extra3Seconds,
+    required this.extra4Seconds,
+  });
+
+  int get elapsedSeconds =>
+      DateTime.now().difference(startTime).inSeconds.clamp(0, 86400);
 }
 
 /// Result object returned by [SessionService.importBackupJson].

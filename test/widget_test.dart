@@ -1016,4 +1016,84 @@ void main() {
       expect(tapped, isTrue);
     },
   );
+
+  test(
+    'ActiveSessionState persistence & recovery prevents study timer data loss',
+    () async {
+      final sessionService = SessionService();
+      await sessionService.init(force: true);
+
+      final now = DateTime.now().subtract(const Duration(seconds: 120));
+      await sessionService.saveActiveSession(
+        startTime: now,
+        modeType: SessionModeType.focus,
+        baselineSeconds: 1500,
+        extra3Seconds: 180,
+        extra4Seconds: 240,
+      );
+
+      final loaded = await sessionService.loadActiveSession();
+      expect(loaded, isNotNull);
+      expect(loaded!.modeType, SessionModeType.focus);
+      expect(loaded.baselineSeconds, 1500);
+      expect(loaded.extra3Seconds, 180);
+      expect(loaded.extra4Seconds, 240);
+      expect(loaded.elapsedSeconds, greaterThanOrEqualTo(120));
+
+      await sessionService.clearActiveSession();
+      final cleared = await sessionService.loadActiveSession();
+      expect(cleared, isNull);
+    },
+  );
+
+  test(
+    'SessionService pre-wipe recovery snapshot protects against accidental data wipe',
+    () async {
+      final sessionService = SessionService();
+      await sessionService.init(force: true);
+
+      await sessionService.recordSession(SessionModeType.focus, 1800);
+      await sessionService.recordSession(SessionModeType.shortBreak, 300);
+      expect(sessionService.totalSessionCount, 2);
+
+      // Wipe data
+      await sessionService.clearAllSessions();
+      expect(sessionService.totalSessionCount, 0);
+      expect(await sessionService.hasPreWipeSnapshot(), isTrue);
+
+      // Restore safety snapshot
+      final restoreResult = await sessionService.restorePreWipeSnapshot();
+      expect(restoreResult.success, isTrue);
+      expect(sessionService.totalSessionCount, 2);
+      expect(sessionService.allTimeFocusSeconds, 1800);
+      expect(sessionService.allTimeBreakSeconds, 300);
+    },
+  );
+
+  test(
+    'AppSettingsService sanitizes invalid inputs and protects against malformed import data',
+    () async {
+      final settings = AppSettingsService();
+      await settings.init(force: true);
+
+      // Invalid theme mode fallback
+      await settings.setThemeMode('invalid_mode_xyz');
+      expect(settings.themeMode, 'light');
+
+      // Invalid update channel fallback
+      await settings.setUpdateChannel('unstable_dev_channel');
+      expect(settings.updateChannel, 'release');
+
+      // Malformed import data protection
+      await settings.importSettings({
+        'themeMode': 12345, // Invalid type
+        'soundEnabled': 'not_a_bool', // Invalid type
+        'updateChannel': 'nightly_bogus', // Invalid option
+      });
+      // Values must remain safe and uncorrupted
+      expect(settings.themeMode, 'light');
+      expect(settings.soundEnabled, isTrue);
+      expect(settings.updateChannel, 'release');
+    },
+  );
 }

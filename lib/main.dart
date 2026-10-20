@@ -4,14 +4,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'src/screens/timer_screen.dart';
 import 'src/services/app_settings_service.dart';
 import 'src/services/behaviour_service.dart';
+import 'src/services/session_service.dart';
 import 'src/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize atomic settings and behaviour preferences
+  // Initialize atomic settings, behaviour preferences, and offline database
   await AppSettingsService.instance.init();
   await BehaviourService.instance.init();
+  await SessionService.instance.init();
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -56,6 +58,25 @@ class _VordAppState extends State<VordApp> {
   void initState() {
     super.initState();
     _themeMode = widget.initialThemeMode;
+    AppSettingsService.instance.addListener(_syncThemeFromSettings);
+  }
+
+  @override
+  void dispose() {
+    AppSettingsService.instance.removeListener(_syncThemeFromSettings);
+    super.dispose();
+  }
+
+  void _syncThemeFromSettings() {
+    final modeStr = AppSettingsService.instance.themeMode;
+    final mode = modeStr == 'dark'
+        ? ThemeMode.dark
+        : (modeStr == 'system' ? ThemeMode.system : ThemeMode.light);
+    if (_themeMode != mode && mounted) {
+      setState(() {
+        _themeMode = mode;
+      });
+    }
   }
 
   Future<void> _updateThemeMode(ThemeMode mode) async {

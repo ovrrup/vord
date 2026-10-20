@@ -26,6 +26,25 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
   String? _statusMessage;
   bool _isSuccess = true;
   bool _isLoading = false;
+  List<File> _localBackups = [];
+  bool _hasPreWipe = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshLocalBackups();
+  }
+
+  Future<void> _refreshLocalBackups() async {
+    final backups = await widget.sessionService.getLocalBackupFiles();
+    final hasWipe = await widget.sessionService.hasPreWipeSnapshot();
+    if (mounted) {
+      setState(() {
+        _localBackups = backups;
+        _hasPreWipe = hasWipe;
+      });
+    }
+  }
 
   String _formatDuration(int seconds) {
     final hours = seconds ~/ 3600;
@@ -43,26 +62,32 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
     });
 
     try {
+      await widget.sessionService.saveLocalBackupFile();
       final jsonText = widget.sessionService.exportBackupJson();
       final now = DateTime.now();
-      final timestamp = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+      final timestamp =
+          '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
       final fileName = 'vord_backup_$timestamp.json';
 
       final tempDir = await getTemporaryDirectory();
       final file = File('${tempDir.path}/$fileName');
-      await file.writeAsString(jsonText);
+      await file.writeAsString(jsonText, flush: true);
 
-      await SharePlus.instance.share(
-        ShareParams(
-          files: [XFile(file.path)],
-          subject: 'Vord Session Backup',
-          text: 'Vord backup archive: $fileName',
-        ),
-      );
+      try {
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(file.path)],
+            subject: 'Vord Session Backup',
+            text: 'Vord backup archive: $fileName',
+          ),
+        );
+      } catch (_) {}
+
+      await _refreshLocalBackups();
 
       if (mounted) {
         setState(() {
-          _statusMessage = 'Exported file: $fileName';
+          _statusMessage = 'Exported & saved archive: $fileName';
           _isSuccess = true;
           _isLoading = false;
         });
@@ -85,33 +110,34 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
     });
 
     try {
-      final pickedFile = await FilePicker.pickFile();
+      FilePickerResult? result;
+      try {
+        result = await FilePicker.platform.pickFiles(type: FileType.any);
+      } catch (e) {
+        debugPrint('FilePicker pickFiles fallback: $e');
+      }
 
-      if (pickedFile == null) {
+      if (result == null || result.files.isEmpty) {
         setState(() => _isLoading = false);
         return;
       }
 
-      final bytes = await pickedFile.readAsBytes();
-      final content = utf8.decode(bytes);
-
-      if (!mounted) return;
-
-      final replace = await _showImportModeDialog();
-      if (replace == null) {
-        setState(() => _isLoading = false);
-        return;
+      final pickedFile = result.files.first;
+      String content;
+      if (pickedFile.bytes != null) {
+        content = utf8.decode(pickedFile.bytes!);
+      } else if (pickedFile.path != null) {
+        final f = File(pickedFile.path!);
+        if (await f.exists()) {
+          content = await f.readAsString();
+        } else {
+          throw Exception('Selected file was not found on disk.');
+        }
+      } else {
+        throw Exception('Selected file could not be read.');
       }
 
-      final importResult = await widget.sessionService.importBackupJson(content, replace: replace);
-
-      if (mounted) {
-        setState(() {
-          _statusMessage = importResult.message;
-          _isSuccess = importResult.success;
-          _isLoading = false;
-        });
-      }
+      await _processRestoreContent(content);
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -120,6 +146,44 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _processRestoreContent(String content) async {
+    final replace = await _showImportModeDialog();
+    if (replace == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    final importResult =
+        await widget.sessionService.importBackupJson(content, replace: replace);
+    await _refreshLocalBackups();
+
+    if (mounted) {
+      setState(() {
+        _statusMessage = importResult.message;
+        _isSuccess = importResult.success;
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _handleRestorePreWipeSnapshot() async {
+    setState(() {
+      _isLoading = true;
+      _statusMessage = null;
+    });
+
+    final result = await widget.sessionService.restorePreWipeSnapshot();
+    await _refreshLocalBackups();
+
+    if (mounted) {
+      setState(() {
+        _statusMessage = result.message;
+        _isSuccess = result.success;
+        _isLoading = false;
+      });
     }
   }
 
@@ -236,8 +300,9 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
 
     if (confirmed == true) {
       await widget.sessionService.clearAllSessions();
+      await _refreshLocalBackups();
       setState(() {
-        _statusMessage = 'All session archives have been wiped.';
+        _statusMessage = 'All session archives have been wiped (recovery snapshot preserved).';
         _isSuccess = true;
       });
     }
@@ -539,6 +604,134 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
                         ),
                       ),
                     ),
+
+                    // Pre-Wipe Recovery Safety Net
+                    if (_hasPreWipe) ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(12.0),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E2822) : const Color(0xFFEDF7F1),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.shield_outlined,
+                                  size: 16,
+                                  color: isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'SAFETY SNAPSHOT AVAILABLE',
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 1.0,
+                                      color: isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              height: 40,
+                              child: PhysicalMatteButton(
+                                onTap: _isLoading ? () {} : _handleRestorePreWipeSnapshot,
+                                borderRadius: 0.0,
+                                child: Text(
+                                  'RESTORE SAFETY SNAPSHOT',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.8,
+                                    color: textPrimary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    // Local Saved Archives
+                    if (_localBackups.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      Text(
+                        'SAVED LOCAL ARCHIVES (${_localBackups.length})',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.2,
+                          color: textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ..._localBackups.take(5).map((file) {
+                        final name = file.path.split('/').last;
+                        final kb = (file.lengthSync() / 1024.0).toStringAsFixed(1);
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 6.0),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF141619) : const Color(0xFFF7F9FB),
+                              border: Border.all(color: borderCol, width: 1.2),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.archive_outlined, size: 16, color: textSecondary),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    name,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: textPrimary,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Text(
+                                  '$kb KB',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: textSecondary,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                SizedBox(
+                                  height: 28,
+                                  child: PhysicalMatteButton(
+                                    onTap: () async {
+                                      final content = await file.readAsString();
+                                      await _processRestoreContent(content);
+                                    },
+                                    borderRadius: 0.0,
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    child: const Text(
+                                      'LOAD',
+                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+                    ],
 
                     const SizedBox(height: 32),
 

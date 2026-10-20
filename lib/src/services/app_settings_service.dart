@@ -26,6 +26,7 @@ class AppSettingsService extends ChangeNotifier {
   File? _settingsFile;
   File? _backupFile;
   Future<void>? _activeWriteChain;
+  Future<void>? _initFuture;
   bool _isInitialized = false;
 
   // Cached preference values
@@ -60,77 +61,86 @@ class AppSettingsService extends ChangeNotifier {
   static bool enableDiskStorage = true;
 
   /// Initializes the storage engine, loading from disk, backup, or cache.
-  Future<void> init({bool force = false}) async {
-    if (_isInitialized && !force) return;
+  Future<void> init({bool force = false}) {
+    if (_isInitialized && !force) return Future.value();
+    if (_initFuture != null && !force) return _initFuture!;
+    final completer = Completer<void>();
+    _initFuture = completer.future;
 
-    try {
-      if (!_inTest && enableDiskStorage) {
-        try {
-          final docsDir = await getApplicationDocumentsDirectory();
-          _settingsFile = File('${docsDir.path}/$_settingsFileName');
-          _backupFile = File('${docsDir.path}/$_settingsBackupFileName');
-        } catch (_) {
+    () async {
+      try {
+        if (!_inTest && enableDiskStorage) {
+          try {
+            final docsDir = await getApplicationDocumentsDirectory();
+            _settingsFile = File('${docsDir.path}/$_settingsFileName');
+            _backupFile = File('${docsDir.path}/$_settingsBackupFileName');
+          } catch (_) {
+            _settingsFile = null;
+            _backupFile = null;
+          }
+        } else {
           _settingsFile = null;
           _backupFile = null;
         }
-      } else {
-        _settingsFile = null;
-        _backupFile = null;
-      }
 
-      bool loaded = false;
+        bool loaded = false;
 
-      // 1. Primary disk file
-      if (_settingsFile != null && await _settingsFile!.exists()) {
-        try {
-          final content = await _settingsFile!.readAsString();
-          loaded = _parseAndApply(content);
-        } catch (_) {
-          loaded = false;
-        }
-      }
-
-      // 2. Rolling backup file
-      if (!loaded && _backupFile != null && await _backupFile!.exists()) {
-        try {
-          final content = await _backupFile!.readAsString();
-          loaded = _parseAndApply(content);
-        } catch (_) {
-          loaded = false;
-        }
-      }
-
-      // 3. SharedPreferences secondary cache
-      if (!loaded) {
-        try {
-          final prefs = await SharedPreferences.getInstance();
-          final cached = prefs.getString('vord_settings_json');
-          if (cached != null && cached.isNotEmpty) {
-            loaded = _parseAndApply(cached);
+        // 1. Primary disk file
+        if (_settingsFile != null && await _settingsFile!.exists()) {
+          try {
+            final content = await _settingsFile!.readAsString();
+            loaded = _parseAndApply(content);
+          } catch (_) {
+            loaded = false;
           }
+        }
 
-          if (!loaded) {
-            // Read legacy individual keys
-            _themeMode = prefs.getString('theme_mode') ?? 'light';
-            _soundEnabled = prefs.getBool('vord_sound_enabled') ?? true;
-            _hapticEnabled = prefs.getBool('vord_haptic_enabled') ?? true;
-            _hideStatusBar = prefs.getBool('vord_hide_status_bar') ?? true;
-            _hideNavBar = prefs.getBool('vord_hide_nav_bar') ?? false;
-            _showTime = prefs.getBool('vord_show_time') ?? false;
-            _updateChannel = prefs.getString('vord_update_channel') ?? 'release';
-            _lastInstalledCommitSha = prefs.getString('vord_installed_commit_sha');
-            loaded = true;
+        // 2. Rolling backup file
+        if (!loaded && _backupFile != null && await _backupFile!.exists()) {
+          try {
+            final content = await _backupFile!.readAsString();
+            loaded = _parseAndApply(content);
+          } catch (_) {
+            loaded = false;
           }
-        } catch (_) {}
-      }
+        }
 
-      if (loaded && !_inTest) {
-        _queueDiskWrite();
-      }
-    } catch (_) {}
+        // 3. SharedPreferences secondary cache
+        if (!loaded) {
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            final cached = prefs.getString('vord_settings_json');
+            if (cached != null && cached.isNotEmpty) {
+              loaded = _parseAndApply(cached);
+            }
 
-    _isInitialized = true;
-    notifyListeners();
+            if (!loaded) {
+              // Read legacy individual keys
+              _themeMode = prefs.getString('theme_mode') ?? 'light';
+              _soundEnabled = prefs.getBool('vord_sound_enabled') ?? true;
+              _hapticEnabled = prefs.getBool('vord_haptic_enabled') ?? true;
+              _hideStatusBar = prefs.getBool('vord_hide_status_bar') ?? true;
+              _hideNavBar = prefs.getBool('vord_hide_nav_bar') ?? false;
+              _showTime = prefs.getBool('vord_show_time') ?? false;
+              _updateChannel = prefs.getString('vord_update_channel') ?? 'release';
+              _lastInstalledCommitSha = prefs.getString('vord_installed_commit_sha');
+              loaded = true;
+            }
+          } catch (_) {}
+        }
+
+        if (loaded && !_inTest) {
+          await _queueDiskWrite();
+        }
+      } catch (_) {
+      } finally {
+        _isInitialized = true;
+        completer.complete();
+        notifyListeners();
+      }
+    }();
+
+    return _initFuture!;
   }
 
   bool _parseAndApply(String jsonContent) {
@@ -185,29 +195,35 @@ class AppSettingsService extends ChangeNotifier {
 
   /// Restores settings directly from a Map (e.g. during backup import).
   Future<void> importSettings(Map<String, dynamic> data) async {
-    if (data.containsKey('themeMode')) {
-      _themeMode = data['themeMode'] as String? ?? _themeMode;
+    if (data.containsKey('themeMode') && data['themeMode'] is String) {
+      final mode = data['themeMode'] as String;
+      if (const {'light', 'dark', 'system'}.contains(mode)) {
+        _themeMode = mode;
+      }
     }
-    if (data.containsKey('soundEnabled')) {
-      _soundEnabled = data['soundEnabled'] as bool? ?? _soundEnabled;
+    if (data.containsKey('soundEnabled') && data['soundEnabled'] is bool) {
+      _soundEnabled = data['soundEnabled'] as bool;
     }
-    if (data.containsKey('hapticEnabled')) {
-      _hapticEnabled = data['hapticEnabled'] as bool? ?? _hapticEnabled;
+    if (data.containsKey('hapticEnabled') && data['hapticEnabled'] is bool) {
+      _hapticEnabled = data['hapticEnabled'] as bool;
     }
-    if (data.containsKey('hideStatusBar')) {
-      _hideStatusBar = data['hideStatusBar'] as bool? ?? _hideStatusBar;
+    if (data.containsKey('hideStatusBar') && data['hideStatusBar'] is bool) {
+      _hideStatusBar = data['hideStatusBar'] as bool;
     }
-    if (data.containsKey('hideNavBar')) {
-      _hideNavBar = data['hideNavBar'] as bool? ?? _hideNavBar;
+    if (data.containsKey('hideNavBar') && data['hideNavBar'] is bool) {
+      _hideNavBar = data['hideNavBar'] as bool;
     }
-    if (data.containsKey('showTime')) {
-      _showTime = data['showTime'] as bool? ?? _showTime;
+    if (data.containsKey('showTime') && data['showTime'] is bool) {
+      _showTime = data['showTime'] as bool;
     }
-    if (data.containsKey('updateChannel')) {
-      _updateChannel = data['updateChannel'] as String? ?? _updateChannel;
+    if (data.containsKey('updateChannel') && data['updateChannel'] is String) {
+      final ch = data['updateChannel'] as String;
+      if (const {'release', 'commit'}.contains(ch)) {
+        _updateChannel = ch;
+      }
     }
     if (data.containsKey('lastInstalledCommitSha')) {
-      _lastInstalledCommitSha = data['lastInstalledCommitSha'] as String? ?? _lastInstalledCommitSha;
+      _lastInstalledCommitSha = data['lastInstalledCommitSha'] as String?;
     }
 
     notifyListeners();
@@ -215,8 +231,10 @@ class AppSettingsService extends ChangeNotifier {
   }
 
   Future<void> setThemeMode(String mode) async {
-    if (_themeMode == mode) return;
-    _themeMode = mode;
+    const validModes = {'light', 'dark', 'system'};
+    final sanitized = validModes.contains(mode) ? mode : 'light';
+    if (_themeMode == sanitized) return;
+    _themeMode = sanitized;
     notifyListeners();
     await _queueDiskWrite();
   }
@@ -257,8 +275,10 @@ class AppSettingsService extends ChangeNotifier {
   }
 
   Future<void> setUpdateChannel(String channel) async {
-    if (_updateChannel == channel) return;
-    _updateChannel = channel;
+    const validChannels = {'release', 'commit'};
+    final sanitized = validChannels.contains(channel) ? channel : 'release';
+    if (_updateChannel == sanitized) return;
+    _updateChannel = sanitized;
     notifyListeners();
     await _queueDiskWrite();
   }
@@ -313,13 +333,23 @@ class AppSettingsService extends ChangeNotifier {
 
         if (await _settingsFile!.exists() && _backupFile != null) {
           try {
-            await _settingsFile!.copy(_backupFile!.path);
+            final len = await _settingsFile!.length();
+            if (len > 10) {
+              await _settingsFile!.copy(_backupFile!.path);
+            }
           } catch (_) {}
         }
 
         final tmpFile = File('${_settingsFile!.path}.tmp');
         await tmpFile.writeAsString(jsonString, flush: true);
-        await tmpFile.rename(_settingsFile!.path);
+        try {
+          await tmpFile.rename(_settingsFile!.path);
+        } catch (_) {
+          if (await _settingsFile!.exists()) {
+            await _settingsFile!.delete();
+          }
+          await tmpFile.rename(_settingsFile!.path);
+        }
       }
 
       // 2. Secondary mirror to SharedPreferences cache & individual legacy keys

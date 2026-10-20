@@ -376,6 +376,22 @@ class _OptionsSheetState extends State<OptionsSheet> {
     super.initState();
     _soundEnabled = SoundService.soundEnabled;
     _hapticEnabled = SoundService.hapticEnabled;
+    AppSettingsService.instance.addListener(_syncFromAppSettings);
+  }
+
+  void _syncFromAppSettings() {
+    if (mounted) {
+      setState(() {
+        _soundEnabled = AppSettingsService.instance.soundEnabled;
+        _hapticEnabled = AppSettingsService.instance.hapticEnabled;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    AppSettingsService.instance.removeListener(_syncFromAppSettings);
+    super.dispose();
   }
 
   @override
