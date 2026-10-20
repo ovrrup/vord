@@ -50,7 +50,7 @@ jobs:
             sed -i 's/compileSdk = .*/compileSdk = 36/' android/app/build.gradle.kts || true
           fi
           if [ -f "android/app/src/main/AndroidManifest.xml" ]; then
-            sed -i 's/<manifest [^>]*>/&\n    <uses-permission android:name="android.permission.INTERNET"\/>\n    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"\/>/' android/app/src/main/AndroidManifest.xml || true
+            sed -i 's/<manifest [^>]*>/&\n    <uses-permission android:name="android.permission.INTERNET"\/>\n    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"\/>\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"\/>\n    <uses-permission android:name="android.permission.VIBRATE"\/>\n    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"\/>\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"\/>\n    <uses-permission android:name="android.permission.USE_EXACT_ALARM"\/>/' android/app/src/main/AndroidManifest.xml || true
           fi
 
       - name: Install dependencies

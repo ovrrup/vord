@@ -35,6 +35,7 @@ class AppSettingsService extends ChangeNotifier {
   bool _hideStatusBar = true; // Default: true
   bool _hideNavBar = false; // Default: false
   bool _showTime = false; // Default: false
+  bool _notificationsEnabled = true; // Default: true (Smart study reminders)
   String _updateChannel = 'release'; // 'release', 'commit'
   String? _lastInstalledCommitSha;
 
@@ -46,6 +47,7 @@ class AppSettingsService extends ChangeNotifier {
   bool get hideStatusBar => _hideStatusBar;
   bool get hideNavBar => _hideNavBar;
   bool get showTime => _showTime;
+  bool get notificationsEnabled => _notificationsEnabled;
   String get updateChannel => _updateChannel;
   String? get lastInstalledCommitSha => _lastInstalledCommitSha;
 
@@ -150,6 +152,12 @@ class AppSettingsService extends ChangeNotifier {
             loaded = true;
           }
 
+          final prefNotif = prefs.getBool('vord_notifications_enabled');
+          if (prefNotif != null) {
+            _notificationsEnabled = prefNotif;
+            loaded = true;
+          }
+
           final prefChannel = prefs.getString('vord_update_channel');
           if (prefChannel != null &&
               const {'release', 'commit'}.contains(prefChannel)) {
@@ -200,6 +208,10 @@ class AppSettingsService extends ChangeNotifier {
         if (decoded.containsKey('showTime')) {
           _showTime = decoded['showTime'] as bool? ?? false;
         }
+        if (decoded.containsKey('notificationsEnabled')) {
+          _notificationsEnabled =
+              decoded['notificationsEnabled'] as bool? ?? true;
+        }
         if (decoded.containsKey('updateChannel')) {
           _updateChannel = decoded['updateChannel'] as String? ?? 'release';
         }
@@ -221,6 +233,7 @@ class AppSettingsService extends ChangeNotifier {
       'hideStatusBar': _hideStatusBar,
       'hideNavBar': _hideNavBar,
       'showTime': _showTime,
+      'notificationsEnabled': _notificationsEnabled,
       'updateChannel': _updateChannel,
       'lastInstalledCommitSha': _lastInstalledCommitSha,
       'savedAt': DateTime.now().toUtc().toIso8601String(),
@@ -249,6 +262,10 @@ class AppSettingsService extends ChangeNotifier {
     }
     if (data.containsKey('showTime') && data['showTime'] is bool) {
       _showTime = data['showTime'] as bool;
+    }
+    if (data.containsKey('notificationsEnabled') &&
+        data['notificationsEnabled'] is bool) {
+      _notificationsEnabled = data['notificationsEnabled'] as bool;
     }
     if (data.containsKey('updateChannel') && data['updateChannel'] is String) {
       final ch = data['updateChannel'] as String;
@@ -304,6 +321,13 @@ class AppSettingsService extends ChangeNotifier {
   Future<void> setShowTime(bool show) async {
     if (_showTime == show) return;
     _showTime = show;
+    notifyListeners();
+    await _queueDiskWrite();
+  }
+
+  Future<void> setNotificationsEnabled(bool enabled) async {
+    if (_notificationsEnabled == enabled) return;
+    _notificationsEnabled = enabled;
     notifyListeners();
     await _queueDiskWrite();
   }
@@ -367,6 +391,7 @@ class AppSettingsService extends ChangeNotifier {
       await prefs.setBool('vord_hide_status_bar', _hideStatusBar);
       await prefs.setBool('vord_hide_nav_bar', _hideNavBar);
       await prefs.setBool('vord_show_time', _showTime);
+      await prefs.setBool('vord_notifications_enabled', _notificationsEnabled);
       await prefs.setString('vord_update_channel', _updateChannel);
       if (_lastInstalledCommitSha != null) {
         await prefs.setString('vord_installed_commit_sha', _lastInstalledCommitSha!);
@@ -405,6 +430,7 @@ class AppSettingsService extends ChangeNotifier {
     bool? hideStatusBar,
     bool? hideNavBar,
     bool? showTime,
+    bool? notificationsEnabled,
     String? updateChannel,
     String? lastInstalledCommitSha,
   }) {
@@ -416,6 +442,9 @@ class AppSettingsService extends ChangeNotifier {
     if (hideStatusBar != null) _hideStatusBar = hideStatusBar;
     if (hideNavBar != null) _hideNavBar = hideNavBar;
     if (showTime != null) _showTime = showTime;
+    if (notificationsEnabled != null) {
+      _notificationsEnabled = notificationsEnabled;
+    }
     if (updateChannel != null) _updateChannel = updateChannel;
     if (lastInstalledCommitSha != null) _lastInstalledCommitSha = lastInstalledCommitSha;
     notifyListeners();

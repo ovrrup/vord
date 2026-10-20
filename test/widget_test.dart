@@ -3,11 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vord/main.dart';
 import 'package:vord/src/models/session_mode.dart';
+import 'package:vord/src/models/study_session.dart';
 import 'package:vord/src/screens/behaviour_screen.dart';
 import 'package:vord/src/screens/history_screen.dart';
 import 'package:vord/src/services/app_settings_service.dart';
 import 'package:vord/src/services/behaviour_service.dart';
 import 'package:vord/src/services/session_service.dart';
+import 'package:vord/src/services/smart_notification_service.dart';
 import 'package:vord/src/services/sound_service.dart';
 import 'package:vord/src/services/update_service.dart';
 import 'package:vord/src/widgets/physical_matte_controls.dart';
@@ -22,6 +24,7 @@ void main() {
     SessionService.isTestMode = true;
     SessionService.instance = SessionService();
     BehaviourService.isTestMode = true;
+    SmartNotificationService.isTestMode = true;
     SoundService.enableAudio =
         false; // Disable audio playback during unit/widget tests
     UpdateService.mockCheckHandler = null;
@@ -35,6 +38,7 @@ void main() {
       hideStatusBar: true,
       hideNavBar: false,
       showTime: false,
+      notificationsEnabled: true,
       updateChannel: 'release',
     );
     BehaviourService.instance.setMockValues(
@@ -1157,4 +1161,168 @@ void main() {
 
     expect(SoundService.soundEnabled, isTrue);
   });
+
+  test(
+    'FocusTimingAnalyzer accurately identifies peak focus hours and generates smart messages',
+    () {
+      // 1. Empty sessions fallback to default hour
+      expect(FocusTimingAnalyzer.analyzeOptimalFocusHour([], defaultHour: 15), 15);
+
+      final now = DateTime(2026, 10, 20, 16, 0); // 4:00 PM
+
+      // 2. Sample sessions: User studied yesterday at 2:00 PM (14:00) for 50 min
+      // and 3 days ago at 2:00 PM for 40 min, and 20 days ago at 9:00 AM for 20 min
+      final s1 = StudySession(
+        id: '1',
+        modeType: SessionModeType.focus,
+        durationSeconds: 3000, // 50m
+        completedAt: DateTime(2026, 10, 19, 14, 50),
+      );
+      final s2 = StudySession(
+        id: '2',
+        modeType: SessionModeType.focus,
+        durationSeconds: 2400, // 40m
+        completedAt: DateTime(2026, 10, 17, 14, 40),
+      );
+      final s3 = StudySession(
+        id: '3',
+        modeType: SessionModeType.focus,
+        durationSeconds: 1200, // 20m
+        completedAt: DateTime(2026, 9, 30, 9, 20),
+      );
+      final restSession = StudySession(
+        id: '4',
+        modeType: SessionModeType.shortBreak,
+        durationSeconds: 300,
+        completedAt: DateTime(2026, 10, 20, 15, 0),
+      );
+
+      final sessions = [s3, s2, s1, restSession];
+
+      // Peak hour must be 14 (2:00 PM)
+      final peakHour = FocusTimingAnalyzer.analyzeOptimalFocusHour(
+        sessions,
+        customNow: now,
+      );
+      expect(peakHour, 14);
+
+      // Hours since last focus session (s1 completed 25h 10m ago)
+      final hoursSince =
+          FocusTimingAnalyzer.calculateHoursSinceLastFocus(sessions, now);
+      expect(hoursSince, 25);
+
+      // Next reminder calculation
+      final nextTime =
+          FocusTimingAnalyzer.calculateNextReminderTime(sessions, now);
+      // Since it's currently 16:00 (past 14:00 today), candidate is tomorrow at 14:00
+      expect(nextTime.year, 2026);
+      expect(nextTime.month, 10);
+      expect(nextTime.day, 21);
+      expect(nextTime.hour, 14);
+
+      // Message generation for active streak (25h since last session)
+      final msg = FocusTimingAnalyzer.generateNotificationMessage(
+        sessions,
+        nextTime,
+        now,
+      );
+      expect(msg.title, 'PEAK FOCUS WINDOW');
+      expect(msg.body.contains('2:00 PM'), isTrue);
+
+      // Hour formatting checks
+      expect(FocusTimingAnalyzer.formatHour(0), '12:00 AM');
+      expect(FocusTimingAnalyzer.formatHour(9), '9:00 AM');
+      expect(FocusTimingAnalyzer.formatHour(12), '12:00 PM');
+      expect(FocusTimingAnalyzer.formatHour(14), '2:00 PM');
+      expect(FocusTimingAnalyzer.formatHour(21), '9:00 PM');
+    },
+  );
+
+  test(
+    'FocusTimingAnalyzer re-engagement nudge for inactive users (> 48h)',
+    () {
+      final now = DateTime(2026, 10, 20, 10, 0);
+      final oldSession = StudySession(
+        id: 'old',
+        modeType: SessionModeType.focus,
+        durationSeconds: 1500,
+        completedAt: DateTime(2026, 10, 16, 10, 0), // 4 days ago
+      );
+
+      final nextTime = FocusTimingAnalyzer.calculateNextReminderTime(
+        [oldSession],
+        now,
+      );
+      final msg = FocusTimingAnalyzer.generateNotificationMessage(
+        [oldSession],
+        nextTime,
+        now,
+      );
+
+      expect(msg.title, 'REBUILD YOUR MOMENTUM');
+      expect(msg.body.contains('days since your last focus mark'), isTrue);
+    },
+  );
+
+  test(
+    'SmartNotificationService schedules and cancels reminders according to settings',
+    () async {
+      final service = SmartNotificationService.instance;
+      await service.init();
+
+      // Enabled state: calculates next reminder time
+      await AppSettingsService.instance.setNotificationsEnabled(true);
+      await service.scheduleSmartReminder(
+        customNow: DateTime(2026, 10, 20, 9, 0),
+      );
+
+      expect(service.nextScheduledTime, isNotNull);
+      expect(service.lastMessage, isNotNull);
+
+      // Disabled state: cancels and clears scheduled time
+      await AppSettingsService.instance.setNotificationsEnabled(false);
+      await service.scheduleSmartReminder();
+
+      expect(service.nextScheduledTime, isNull);
+      expect(service.lastMessage, isNull);
+
+      // Instant test notification runs safely without throwing
+      await service.showInstantReminder();
+      expect(service.lastMessage, isNotNull);
+    },
+  );
+
+  testWidgets(
+    'BehaviourScreen renders smart study reminder toggle and instant test button',
+    (WidgetTester tester) async {
+      await AppSettingsService.instance.setNotificationsEnabled(true);
+
+      await tester.pumpWidget(
+        const MaterialApp(home: BehaviourScreen()),
+      );
+
+      expect(find.text('SMART STUDY REMINDERS'), findsOneWidget);
+      expect(find.byKey(const Key('toggle_smart_notifications')), findsOneWidget);
+      expect(find.byKey(const Key('test_instant_notification')), findsOneWidget);
+      expect(find.text('TEST REMINDER NOTIFICATION'), findsOneWidget);
+
+      // Toggle smart reminders
+      await tester.tap(find.byKey(const Key('toggle_smart_notifications')));
+      await tester.pumpAndSettle();
+      expect(AppSettingsService.instance.notificationsEnabled, isFalse);
+
+      await tester.tap(find.byKey(const Key('toggle_smart_notifications')));
+      await tester.pumpAndSettle();
+      expect(AppSettingsService.instance.notificationsEnabled, isTrue);
+
+      // Tap Test Instant Notification
+      await tester.tap(find.byKey(const Key('test_instant_notification')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Test study reminder notification triggered.'),
+        findsOneWidget,
+      );
+    },
+  );
 }

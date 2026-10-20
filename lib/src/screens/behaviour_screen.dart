@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../services/app_settings_service.dart';
 import '../services/behaviour_service.dart';
+import '../services/smart_notification_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/physical_matte_controls.dart';
 
@@ -135,6 +137,103 @@ class BehaviourScreen extends StatelessWidget {
                           onToggle: () => _service.setShowTime(!showTime),
                         ),
 
+                        const SizedBox(height: 12),
+
+                        // Toggle 4: Smart Study Reminders
+                        ListenableBuilder(
+                          listenable: AppSettingsService.instance,
+                          builder: (context, _) {
+                            final notificationsEnabled =
+                                AppSettingsService.instance.notificationsEnabled;
+                            final optimalHour = SmartNotificationService
+                                .instance.optimalFocusHour;
+                            final formattedHour =
+                                FocusTimingAnalyzer.formatHour(optimalHour);
+
+                            return _buildToggleCard(
+                              key: const Key('toggle_smart_notifications'),
+                              icon: Icons.notifications_active_rounded,
+                              title: 'SMART STUDY REMINDERS',
+                              subtitle:
+                                  'Analyzes study habits · Peak focus at $formattedHour',
+                              isEnabled: notificationsEnabled,
+                              isDark: isDark,
+                              textPrimary: textPrimary,
+                              textSecondary: textSecondary,
+                              onToggle: () async {
+                                final current = notificationsEnabled;
+                                if (!current) {
+                                  await SmartNotificationService.instance
+                                      .requestPermissions();
+                                  await AppSettingsService.instance
+                                      .setNotificationsEnabled(true);
+                                  await SmartNotificationService.instance
+                                      .scheduleSmartReminder();
+                                } else {
+                                  await AppSettingsService.instance
+                                      .setNotificationsEnabled(false);
+                                  await SmartNotificationService.instance
+                                      .cancelAllReminders();
+                                }
+                              },
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        // Test Instant Notification Action
+                        PhysicalMatteButton(
+                          key: const Key('test_instant_notification'),
+                          onTap: () async {
+                            await SmartNotificationService.instance
+                                .showInstantReminder();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text(
+                                    'Test study reminder notification triggered.',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  duration: const Duration(seconds: 2),
+                                  backgroundColor: isDark
+                                      ? const Color(0xFF1E242B)
+                                      : const Color(0xFF2C323B),
+                                ),
+                              );
+                            }
+                          },
+                          borderRadius: 0.0,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0,
+                            vertical: 13.0,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.notifications_none_rounded,
+                                size: 18,
+                                color: isDark
+                                    ? const Color(0xFF3FA36C)
+                                    : const Color(0xFF2E8B57),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'TEST REMINDER NOTIFICATION',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1.0,
+                                  color: textPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
                         const SizedBox(height: 28),
 
                         // Restore Defaults Button
@@ -203,6 +302,7 @@ class BehaviourScreen extends StatelessWidget {
     required Key key,
     required IconData icon,
     required String title,
+    String? subtitle,
     required bool isEnabled,
     required bool isDark,
     required Color textPrimary,
@@ -220,7 +320,7 @@ class BehaviourScreen extends StatelessWidget {
       key: key,
       onTap: onToggle,
       borderRadius: 0.0,
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 15.0),
       child: Row(
         children: [
           Icon(
@@ -230,14 +330,32 @@ class BehaviourScreen extends StatelessWidget {
           ),
           const SizedBox(width: 14),
           Expanded(
-            child: Text(
-              title,
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.8,
-                color: textPrimary,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                    color: textPrimary,
+                  ),
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.4,
+                      color: textSecondary,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
           const SizedBox(width: 12),

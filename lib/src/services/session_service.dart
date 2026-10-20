@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'app_settings_service.dart';
+import 'smart_notification_service.dart';
 import '../models/session_mode.dart';
 import '../models/study_session.dart';
 
@@ -300,6 +301,12 @@ class SessionService extends ChangeNotifier {
     notifyListeners();
 
     await _queueDiskWrite();
+
+    // Recalculate and schedule next intelligent focus reminder
+    try {
+      SmartNotificationService.instance.scheduleSmartReminder();
+    } catch (_) {}
+
     return session;
   }
 

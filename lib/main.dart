@@ -5,6 +5,7 @@ import 'src/screens/timer_screen.dart';
 import 'src/services/app_settings_service.dart';
 import 'src/services/behaviour_service.dart';
 import 'src/services/session_service.dart';
+import 'src/services/smart_notification_service.dart';
 import 'src/services/sound_service.dart';
 import 'src/theme/app_theme.dart';
 
@@ -16,6 +17,10 @@ Future<void> main() async {
   await BehaviourService.instance.init();
   await SessionService.instance.init();
   await SoundService.init();
+  await SmartNotificationService.instance.init();
+  if (AppSettingsService.instance.notificationsEnabled) {
+    await SmartNotificationService.instance.scheduleSmartReminder();
+  }
 
   // Authoritative fallback check to guarantee theme persistence across cold restarts
   try {
