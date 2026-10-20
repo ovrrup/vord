@@ -256,8 +256,8 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
               // 6. Top-Left 45° Tilted Counter Badge (Only rendered when showTime is enabled)
               if (widget.showTime)
                 Positioned(
-                  top: 18,
-                  left: 36,
+                  top: boxSize * 0.062,
+                  left: boxSize * 0.078,
                   child: Transform.rotate(
                     angle: -math.pi / 4,
                     child: DeckTimeCounter(
@@ -705,6 +705,7 @@ class DeckTimeCounter extends StatelessWidget {
   final bool isDark;
   final bool isFocusMode;
   final bool isRunning;
+  final double fontSize;
 
   const DeckTimeCounter({
     super.key,
@@ -712,6 +713,7 @@ class DeckTimeCounter extends StatelessWidget {
     required this.isDark,
     required this.isFocusMode,
     required this.isRunning,
+    this.fontSize = 13.5,
   });
 
   static String formatSituational(int seconds) {
@@ -732,7 +734,7 @@ class DeckTimeCounter extends StatelessWidget {
 
     final Color textColor;
     if (!isRunning) {
-      textColor = isDark ? const Color(0xFF7E8794) : const Color(0xFF6B7280);
+      textColor = isDark ? const Color(0xFF8B949E) : const Color(0xFF57606A);
     } else if (isFocusMode) {
       textColor = isDark ? const Color(0xFF3FA36C) : const Color(0xFF2E8B57);
     } else {
@@ -741,20 +743,28 @@ class DeckTimeCounter extends StatelessWidget {
 
     return Container(
       key: const Key('deck_time_counter'),
-      padding: const EdgeInsets.symmetric(horizontal: 5.0, vertical: 2.0),
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.5),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0E1013) : const Color(0xFFE2E7EC),
+        color: isDark ? const Color(0xFF0C0E11) : const Color(0xFFDCE2E9),
+        borderRadius: BorderRadius.circular(2.0),
         border: Border.all(
-          color: isDark ? const Color(0xFF222830) : const Color(0xFFCAD1DA),
-          width: 1.0,
+          color: isDark ? const Color(0xFF2E3540) : const Color(0xFFBAC3CF),
+          width: 1.2,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? const Color(0x60000000) : const Color(0x18000000),
+            offset: const Offset(0, 1),
+            blurRadius: 2,
+          ),
+        ],
       ),
       child: Text(
         formattedTime,
         style: TextStyle(
-          fontSize: 10.5,
+          fontSize: fontSize,
           fontWeight: FontWeight.w800,
-          letterSpacing: 0.8,
+          letterSpacing: 1.0,
           fontFeatures: const [FontFeature.tabularFigures()],
           color: textColor,
         ),
