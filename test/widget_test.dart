@@ -20,6 +20,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     AppSettingsService.isTestMode = true;
     SessionService.isTestMode = true;
+    SessionService.instance = SessionService();
     BehaviourService.isTestMode = true;
     SoundService.enableAudio =
         false; // Disable audio playback during unit/widget tests
@@ -206,8 +207,8 @@ void main() {
     'HistoryScreen displays categorized sessions and recorded times',
     (WidgetTester tester) async {
       final sessionService = SessionService();
-      sessionService.recordSession(SessionModeType.focus, 1500); // 25m
-      sessionService.recordSession(SessionModeType.shortBreak, 300); // 5m
+      await sessionService.recordSession(SessionModeType.focus, 1500); // 25m
+      await sessionService.recordSession(SessionModeType.shortBreak, 300); // 5m
 
       await tester.pumpWidget(
         MaterialApp(home: HistoryScreen(sessionService: sessionService)),

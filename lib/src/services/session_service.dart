@@ -18,11 +18,9 @@ class SessionService extends ChangeNotifier {
   static const String _backupFileName = 'vord_offline_database.bak';
   static const int _currentSchemaVersion = 2;
 
-  static final SessionService instance = SessionService._internal();
-  factory SessionService() => instance;
-  SessionService._internal() {
-    init();
-  }
+  static SessionService _instance = SessionService();
+  static SessionService get instance => _instance;
+  static set instance(SessionService val) => _instance = val;
 
   final List<StudySession> _sessions = [];
   final Completer<void> _initCompleter = Completer<void>();
@@ -31,6 +29,10 @@ class SessionService extends ChangeNotifier {
   bool _initialized = false;
   File? _databaseFile;
   File? _backupFile;
+
+  SessionService() {
+    _initializeOfflineStorage();
+  }
 
   /// Future that completes when the offline database is fully loaded into memory.
   Future<void> get ready => _initCompleter.future;
@@ -164,11 +166,15 @@ class SessionService extends ChangeNotifier {
       }
 
       if (rawList != null) {
-        _sessions.clear();
+        final existingIds = _sessions.map((s) => s.id).toSet();
         for (final item in rawList) {
           if (item is Map<String, dynamic>) {
             try {
-              _sessions.add(StudySession.fromJson(item));
+              final s = StudySession.fromJson(item);
+              if (!existingIds.contains(s.id)) {
+                _sessions.add(s);
+                existingIds.add(s.id);
+              }
             } catch (_) {}
           }
         }
@@ -202,6 +208,9 @@ class SessionService extends ChangeNotifier {
 
   /// Executes atomic file write with flush and safe rename.
   Future<void> _performAtomicDiskWrite() async {
+    if (!_initialized) {
+      await ready;
+    }
     try {
       final payload = _buildDatabasePayload();
       final jsonString = jsonEncode(payload);
@@ -277,7 +286,6 @@ class SessionService extends ChangeNotifier {
   /// Records a completed session, guarantees non-zero duration,
   /// immediately updates in-memory state with 0ms latency, and queues atomic disk persistence.
   Future<StudySession?> recordSession(SessionModeType modeType, int durationSeconds) async {
-    await ready;
     if (durationSeconds <= 0) return null;
 
     final session = StudySession(
@@ -297,7 +305,6 @@ class SessionService extends ChangeNotifier {
 
   /// Permanently removes a session by ID and flushes changes to disk.
   Future<void> deleteSession(String id) async {
-    await ready;
     _sessions.removeWhere((s) => s.id == id);
     notifyListeners();
     await _queueDiskWrite();
@@ -305,7 +312,9 @@ class SessionService extends ChangeNotifier {
 
   /// Wipes all sessions while maintaining a pre-wipe internal recovery backup.
   Future<void> clearAllSessions() async {
-    await ready;
+    if (!_initialized) {
+      await ready;
+    }
     await _createPreWipeSnapshot();
     _sessions.clear();
     notifyListeners();
@@ -503,7 +512,9 @@ class SessionService extends ChangeNotifier {
   /// If [replace] is true, replaces existing sessions;
   /// otherwise merges with intelligent deduplication based on both ID and session fingerprints.
   Future<BackupImportResult> importBackupJson(String jsonString, {bool replace = false}) async {
-    await ready;
+    if (!_initialized) {
+      await ready;
+    }
     try {
       if (replace) {
         await _createPreWipeSnapshot();
