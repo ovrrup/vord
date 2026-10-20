@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -670,7 +669,7 @@ class SessionService extends ChangeNotifier {
           message: 'No pre-wipe recovery snapshot found.',
         );
       }
-      return importBackupJson(jsonContent, replace: true);
+      return await importBackupJson(jsonContent, replace: true);
     } catch (e) {
       return BackupImportResult(
         success: false,

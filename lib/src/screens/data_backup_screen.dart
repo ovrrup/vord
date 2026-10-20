@@ -110,32 +110,17 @@ class _DataBackupScreenState extends State<DataBackupScreen> {
     });
 
     try {
-      FilePickerResult? result;
-      try {
-        result = await FilePicker.platform.pickFiles(type: FileType.any);
-      } catch (e) {
-        debugPrint('FilePicker pickFiles fallback: $e');
-      }
+      final pickedFile = await FilePicker.pickFile();
 
-      if (result == null || result.files.isEmpty) {
+      if (pickedFile == null) {
         setState(() => _isLoading = false);
         return;
       }
 
-      final pickedFile = result.files.first;
-      String content;
-      if (pickedFile.bytes != null) {
-        content = utf8.decode(pickedFile.bytes!);
-      } else if (pickedFile.path != null) {
-        final f = File(pickedFile.path!);
-        if (await f.exists()) {
-          content = await f.readAsString();
-        } else {
-          throw Exception('Selected file was not found on disk.');
-        }
-      } else {
-        throw Exception('Selected file could not be read.');
-      }
+      final bytes = await pickedFile.readAsBytes();
+      final content = utf8.decode(bytes);
+
+      if (!mounted) return;
 
       await _processRestoreContent(content);
     } catch (e) {

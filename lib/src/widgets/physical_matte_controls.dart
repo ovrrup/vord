@@ -3,6 +3,7 @@ import '../screens/behaviour_screen.dart';
 import '../screens/data_backup_screen.dart';
 import '../screens/history_screen.dart';
 import '../screens/info_updates_screen.dart';
+import '../services/app_settings_service.dart';
 import '../services/session_service.dart';
 import '../services/sound_service.dart';
 import '../theme/app_theme.dart';
