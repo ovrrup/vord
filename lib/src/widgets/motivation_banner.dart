@@ -74,13 +74,23 @@ class MotivationBanner extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 3),
-              Text(
-                motivation,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                  letterSpacing: -0.1,
-                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation,
+                  child: child,
+                ),
+                child: Text(
+                  motivation,
+                  key: ValueKey<String>(motivation),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    letterSpacing: -0.1,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
                 ),
               ),
             ],

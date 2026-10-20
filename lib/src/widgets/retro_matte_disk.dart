@@ -256,8 +256,8 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
               // 6. Top-Left 45° Tilted Counter Badge (Only rendered when showTime is enabled)
               if (widget.showTime)
                 Positioned(
-                  top: boxSize * 0.062,
-                  left: boxSize * 0.078,
+                  top: boxSize * 0.158 - 10.0,
+                  left: boxSize * 0.158 - 26.0,
                   child: Transform.rotate(
                     angle: -math.pi / 4,
                     child: DeckTimeCounter(
@@ -265,6 +265,7 @@ class _RetroMatteDiskState extends State<RetroMatteDisk>
                       isDark: isDark,
                       isFocusMode: widget.isFocusMode,
                       isRunning: widget.isRunning,
+                      fontSize: (boxSize * 0.033).clamp(10.5, 12.0),
                     ),
                   ),
                 ),
@@ -713,17 +714,18 @@ class DeckTimeCounter extends StatelessWidget {
     required this.isDark,
     required this.isFocusMode,
     required this.isRunning,
-    this.fontSize = 13.5,
+    this.fontSize = 11.5,
   });
 
   static String formatSituational(int seconds) {
-    if (seconds < 3600) {
-      final m = (seconds ~/ 60).toString().padLeft(2, '0');
-      final s = (seconds % 60).toString().padLeft(2, '0');
-      return '$m:$s';
+    final s = math.max(0, seconds);
+    if (s < 3600) {
+      final m = (s ~/ 60).toString().padLeft(2, '0');
+      final sec = (s % 60).toString().padLeft(2, '0');
+      return '$m:$sec';
     } else {
-      final h = (seconds ~/ 3600).toString().padLeft(2, '0');
-      final m = ((seconds % 3600) ~/ 60).toString().padLeft(2, '0');
+      final h = (s ~/ 3600).toString().padLeft(2, '0');
+      final m = ((s % 3600) ~/ 60).toString().padLeft(2, '0');
       return '$h:$m';
     }
   }
@@ -741,9 +743,11 @@ class DeckTimeCounter extends StatelessWidget {
       textColor = isDark ? const Color(0xFFE5A93C) : const Color(0xFFC7841B);
     }
 
-    return Container(
+    return AnimatedContainer(
       key: const Key('deck_time_counter'),
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.5),
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutCubic,
+      padding: const EdgeInsets.symmetric(horizontal: 6.5, vertical: 2.5),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF0C0E11) : const Color(0xFFDCE2E9),
         borderRadius: BorderRadius.circular(2.0),
@@ -759,15 +763,17 @@ class DeckTimeCounter extends StatelessWidget {
           ),
         ],
       ),
-      child: Text(
-        formattedTime,
+      child: AnimatedDefaultTextStyle(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
         style: TextStyle(
           fontSize: fontSize,
           fontWeight: FontWeight.w800,
-          letterSpacing: 1.0,
+          letterSpacing: 0.9,
           fontFeatures: const [FontFeature.tabularFigures()],
           color: textColor,
         ),
+        child: Text(formattedTime),
       ),
     );
   }

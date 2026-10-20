@@ -1097,4 +1097,64 @@ void main() {
       expect(settings.updateChannel, 'release');
     },
   );
+
+  test(
+    'AppSettingsService persists settings across simulated cold restarts with SharedPreferences authority',
+    () async {
+      final settings = AppSettingsService();
+      await settings.init(force: true);
+
+      await settings.setThemeMode('dark');
+      await settings.setSoundEnabled(false);
+      await settings.setShowTime(true);
+      await settings.setHideNavBar(true);
+
+      // Verify immediate in-memory and SharedPreferences state
+      expect(settings.themeMode, 'dark');
+      expect(settings.soundEnabled, isFalse);
+      expect(settings.showTime, isTrue);
+      expect(settings.hideNavBar, isTrue);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('theme_mode'), 'dark');
+      expect(prefs.getBool('vord_sound_enabled'), isFalse);
+      expect(prefs.getBool('vord_show_time'), isTrue);
+      expect(prefs.getBool('vord_hide_nav_bar'), isTrue);
+
+      // Simulate cold app restart: re-initialize settings from clean slate
+      final freshSettings = AppSettingsService();
+      await freshSettings.init(force: true);
+
+      expect(freshSettings.themeMode, 'dark');
+      expect(freshSettings.soundEnabled, isFalse);
+      expect(freshSettings.showTime, isTrue);
+      expect(freshSettings.hideNavBar, isTrue);
+    },
+  );
+
+  test('DeckTimeCounter formatSituational handles edge cases cleanly', () {
+    expect(DeckTimeCounter.formatSituational(-10), '00:00');
+    expect(DeckTimeCounter.formatSituational(0), '00:00');
+    expect(DeckTimeCounter.formatSituational(45), '00:45');
+    expect(DeckTimeCounter.formatSituational(59), '00:59');
+    expect(DeckTimeCounter.formatSituational(60), '01:00');
+    expect(DeckTimeCounter.formatSituational(3599), '59:59');
+    expect(DeckTimeCounter.formatSituational(3600), '01:00');
+    expect(DeckTimeCounter.formatSituational(3665), '01:01');
+    expect(DeckTimeCounter.formatSituational(7200), '02:00');
+  });
+
+  test('SoundService runs transport latch and click triggers resiliently', () async {
+    SoundService.enableAudio = false;
+    await SoundService.init();
+
+    // Rapid successive executions should not throw
+    await SoundService.playTapeTransportLatch();
+    await SoundService.playTapeTransportLatch();
+    await SoundService.playTapeSwitchClick();
+    await SoundService.playTapeSwitchClick();
+    await SoundService.playTapeSwitchClick();
+
+    expect(SoundService.soundEnabled, isTrue);
+  });
 }

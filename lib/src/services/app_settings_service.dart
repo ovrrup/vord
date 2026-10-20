@@ -104,29 +104,64 @@ class AppSettingsService extends ChangeNotifier {
           }
         }
 
-        // 3. SharedPreferences secondary cache
-        if (!loaded) {
-          try {
-            final prefs = await SharedPreferences.getInstance();
-            final cached = prefs.getString('vord_settings_json');
-            if (cached != null && cached.isNotEmpty) {
-              loaded = _parseAndApply(cached);
-            }
+        // 3. SharedPreferences secondary cache & individual preference keys
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final cached = prefs.getString('vord_settings_json');
+          if (!loaded && cached != null && cached.isNotEmpty) {
+            loaded = _parseAndApply(cached);
+          }
 
-            if (!loaded) {
-              // Read legacy individual keys
-              _themeMode = prefs.getString('theme_mode') ?? 'light';
-              _soundEnabled = prefs.getBool('vord_sound_enabled') ?? true;
-              _hapticEnabled = prefs.getBool('vord_haptic_enabled') ?? true;
-              _hideStatusBar = prefs.getBool('vord_hide_status_bar') ?? true;
-              _hideNavBar = prefs.getBool('vord_hide_nav_bar') ?? false;
-              _showTime = prefs.getBool('vord_show_time') ?? false;
-              _updateChannel = prefs.getString('vord_update_channel') ?? 'release';
-              _lastInstalledCommitSha = prefs.getString('vord_installed_commit_sha');
-              loaded = true;
-            }
-          } catch (_) {}
-        }
+          // Individual keys act as authoritative persistent overrides
+          final prefTheme = prefs.getString('theme_mode');
+          if (prefTheme != null &&
+              const {'light', 'dark', 'system'}.contains(prefTheme)) {
+            _themeMode = prefTheme;
+            loaded = true;
+          }
+
+          final prefSound = prefs.getBool('vord_sound_enabled');
+          if (prefSound != null) {
+            _soundEnabled = prefSound;
+            loaded = true;
+          }
+
+          final prefHaptic = prefs.getBool('vord_haptic_enabled');
+          if (prefHaptic != null) {
+            _hapticEnabled = prefHaptic;
+            loaded = true;
+          }
+
+          final prefStatusBar = prefs.getBool('vord_hide_status_bar');
+          if (prefStatusBar != null) {
+            _hideStatusBar = prefStatusBar;
+            loaded = true;
+          }
+
+          final prefNavBar = prefs.getBool('vord_hide_nav_bar');
+          if (prefNavBar != null) {
+            _hideNavBar = prefNavBar;
+            loaded = true;
+          }
+
+          final prefShowTime = prefs.getBool('vord_show_time');
+          if (prefShowTime != null) {
+            _showTime = prefShowTime;
+            loaded = true;
+          }
+
+          final prefChannel = prefs.getString('vord_update_channel');
+          if (prefChannel != null &&
+              const {'release', 'commit'}.contains(prefChannel)) {
+            _updateChannel = prefChannel;
+            loaded = true;
+          }
+
+          final prefSha = prefs.getString('vord_installed_commit_sha');
+          if (prefSha != null && prefSha.isNotEmpty) {
+            _lastInstalledCommitSha = prefSha;
+          }
+        } catch (_) {}
 
         if (loaded && !_inTest) {
           await _queueDiskWrite();
@@ -320,38 +355,10 @@ class AppSettingsService extends ChangeNotifier {
   }
 
   Future<void> _performAtomicDiskWrite() async {
+    final jsonString = jsonEncode(toJson());
+
+    // 1. Authoritative mirror to SharedPreferences cache & individual keys (always executed)
     try {
-      final jsonString = jsonEncode(toJson());
-
-      // 1. Primary write to atomic file with .bak rolling backup
-      if (!_inTest && _settingsFile != null) {
-        final parentDir = _settingsFile!.parent;
-        if (!await parentDir.exists()) {
-          await parentDir.create(recursive: true);
-        }
-
-        if (await _settingsFile!.exists() && _backupFile != null) {
-          try {
-            final len = await _settingsFile!.length();
-            if (len > 10) {
-              await _settingsFile!.copy(_backupFile!.path);
-            }
-          } catch (_) {}
-        }
-
-        final tmpFile = File('${_settingsFile!.path}.tmp');
-        await tmpFile.writeAsString(jsonString, flush: true);
-        try {
-          await tmpFile.rename(_settingsFile!.path);
-        } catch (_) {
-          if (await _settingsFile!.exists()) {
-            await _settingsFile!.delete();
-          }
-          await tmpFile.rename(_settingsFile!.path);
-        }
-      }
-
-      // 2. Secondary mirror to SharedPreferences cache & individual legacy keys
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('vord_settings_json', jsonString);
       await prefs.setString('theme_mode', _themeMode);
@@ -365,6 +372,29 @@ class AppSettingsService extends ChangeNotifier {
         await prefs.setString('vord_installed_commit_sha', _lastInstalledCommitSha!);
       }
     } catch (_) {}
+
+    // 2. Primary disk file write with flush and backup
+    if (!_inTest && enableDiskStorage) {
+      try {
+        if (_settingsFile == null) {
+          final docsDir = await getApplicationDocumentsDirectory();
+          _settingsFile = File('${docsDir.path}/$_settingsFileName');
+          _backupFile = File('${docsDir.path}/$_settingsBackupFileName');
+        }
+
+        final parentDir = _settingsFile!.parent;
+        if (!await parentDir.exists()) {
+          await parentDir.create(recursive: true);
+        }
+
+        // Direct write with OS-level flush guarantees persistence without rename errors
+        await _settingsFile!.writeAsString(jsonString, flush: true);
+
+        if (_backupFile != null) {
+          await _backupFile!.writeAsString(jsonString, flush: true);
+        }
+      } catch (_) {}
+    }
   }
 
   @visibleForTesting

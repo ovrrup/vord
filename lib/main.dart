@@ -17,6 +17,17 @@ Future<void> main() async {
   await SessionService.instance.init();
   await SoundService.init();
 
+  // Authoritative fallback check to guarantee theme persistence across cold restarts
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final prefTheme = prefs.getString('theme_mode');
+    if (prefTheme != null &&
+        const {'light', 'dark', 'system'}.contains(prefTheme) &&
+        prefTheme != AppSettingsService.instance.themeMode) {
+      await AppSettingsService.instance.setThemeMode(prefTheme);
+    }
+  } catch (_) {}
+
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,

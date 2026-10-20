@@ -8,6 +8,35 @@ import '../services/session_service.dart';
 import '../services/sound_service.dart';
 import '../theme/app_theme.dart';
 
+/// Tactile, weighted mechanical page transition with subtle slide and fade.
+PageRoute<T> physicalMatteRoute<T>(Widget page) {
+  if (AppSettingsService.isTestMode) {
+    return MaterialPageRoute<T>(builder: (_) => page);
+  }
+  return PageRouteBuilder<T>(
+    pageBuilder: (context, animation, secondaryAnimation) => page,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      );
+      return SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0.0, 0.05),
+          end: Offset.zero,
+        ).animate(curved),
+        child: FadeTransition(
+          opacity: curved,
+          child: child,
+        ),
+      );
+    },
+    transitionDuration: const Duration(milliseconds: 220),
+    reverseTransitionDuration: const Duration(milliseconds: 180),
+  );
+}
+
 /// Reusable physical matte button with solid physical presence,
 /// deep mechanical travel depression, and real mechanical latch/click audio.
 class PhysicalMatteButton extends StatefulWidget {
@@ -182,6 +211,10 @@ class BottomControls extends StatelessWidget {
     const modeButtonHeight = availableRightHeight * (1.0 / 3.0);
     const settingsButtonHeight = availableRightHeight * (2.0 / 3.0);
 
+    final switchDuration = AppSettingsService.isTestMode
+        ? Duration.zero
+        : const Duration(milliseconds: 180);
+
     return SizedBox(
       height: controlsHeight,
       child: Row(
@@ -207,45 +240,66 @@ class BottomControls extends StatelessWidget {
               child: Stack(
                 children: [
                   // Discrete solid active indicator bar along the top edge
-                  if (isRunning)
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: 3.5,
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: 3.5,
+                    child: AnimatedOpacity(
+                      duration: switchDuration,
+                      opacity: isRunning ? 1.0 : 0.0,
                       child: Container(
                         color: isDark
                             ? const Color(0xFF3FA36C)
                             : const Color(0xFF2E8B57),
                       ),
                     ),
+                  ),
 
                   Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          isRunning
-                              ? Icons.stop_rounded
-                              : Icons.play_arrow_rounded,
-                          size: 42,
-                          color: isDark
-                              ? AppTheme.darkTextPrimary
-                              : AppTheme.lightTextPrimary,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          isRunning ? 'STOP' : 'START',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 2.0,
+                    child: AnimatedSwitcher(
+                      duration: switchDuration,
+                      transitionBuilder: (child, animation) {
+                        return FadeTransition(
+                          opacity: animation,
+                          child: ScaleTransition(
+                            scale: Tween<double>(begin: 0.94, end: 1.0).animate(
+                              CurvedAnimation(
+                                parent: animation,
+                                curve: Curves.easeOutCubic,
+                              ),
+                            ),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: Row(
+                        key: ValueKey<bool>(isRunning),
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            isRunning
+                                ? Icons.stop_rounded
+                                : Icons.play_arrow_rounded,
+                            size: 42,
                             color: isDark
                                 ? AppTheme.darkTextPrimary
                                 : AppTheme.lightTextPrimary,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 12),
+                          Text(
+                            isRunning ? 'STOP' : 'START',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 2.0,
+                              color: isDark
+                                  ? AppTheme.darkTextPrimary
+                                  : AppTheme.lightTextPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -268,33 +322,37 @@ class BottomControls extends StatelessWidget {
                     onTap: onToggleMode,
                     borderRadius: 0.0,
                     child: Center(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 6,
-                            height: 6,
-                            color: isFocusMode
-                                ? (isDark
-                                      ? const Color(0xFF3FA36C)
-                                      : const Color(0xFF2E8B57))
-                                : (isDark
-                                      ? const Color(0xFF8B949E)
-                                      : const Color(0xFF656D76)),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            isFocusMode ? 'FOCUS' : 'REST',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.0,
-                              color: isDark
-                                  ? AppTheme.darkTextPrimary
-                                  : AppTheme.lightTextPrimary,
+                      child: AnimatedSwitcher(
+                        duration: switchDuration,
+                        child: Row(
+                          key: ValueKey<bool>(isFocusMode),
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              color: isFocusMode
+                                  ? (isDark
+                                        ? const Color(0xFF3FA36C)
+                                        : const Color(0xFF2E8B57))
+                                  : (isDark
+                                        ? const Color(0xFF8B949E)
+                                        : const Color(0xFF656D76)),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 6),
+                            Text(
+                              isFocusMode ? 'FOCUS' : 'REST',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.0,
+                                color: isDark
+                                    ? AppTheme.darkTextPrimary
+                                    : AppTheme.lightTextPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -470,9 +528,8 @@ class _OptionsSheetState extends State<OptionsSheet> {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          HistoryScreen(sessionService: widget.sessionService),
+                    physicalMatteRoute(
+                      HistoryScreen(sessionService: widget.sessionService),
                     ),
                   );
                 },
@@ -519,8 +576,8 @@ class _OptionsSheetState extends State<OptionsSheet> {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => DataBackupScreen(
+                    physicalMatteRoute(
+                      DataBackupScreen(
                         sessionService: widget.sessionService,
                       ),
                     ),
@@ -581,8 +638,8 @@ class _OptionsSheetState extends State<OptionsSheet> {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => InfoUpdatesScreen(
+                    physicalMatteRoute(
+                      InfoUpdatesScreen(
                         sessionService: widget.sessionService,
                       ),
                     ),
@@ -631,8 +688,8 @@ class _OptionsSheetState extends State<OptionsSheet> {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const BehaviourScreen(),
+                    physicalMatteRoute(
+                      const BehaviourScreen(),
                     ),
                   );
                 },
