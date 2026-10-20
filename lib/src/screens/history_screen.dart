@@ -318,6 +318,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               ),
                               const SizedBox(width: 8),
                               GestureDetector(
+                                behavior: HitTestBehavior.opaque,
                                 onTap: () async {
                                   SoundService.playTapeSwitchClick();
                                   final confirm = await showDialog<bool>(
@@ -395,6 +396,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     return Expanded(
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: () {
           SoundService.playTapeSwitchClick();
           setState(() => _selectedCategoryIndex = index);

@@ -36,10 +36,18 @@ class PhysicalMatteButton extends StatefulWidget {
 
 class _PhysicalMatteButtonState extends State<PhysicalMatteButton> {
   bool _isPressed = false;
+  bool _tapDispatched = false;
 
   void _handleTapDown(TapDownDetails details) {
+    _tapDispatched = false;
     if (!_isPressed) {
       setState(() => _isPressed = true);
+    }
+    // Instant mechanical feedback on initial touch
+    if (widget.isTransportKey) {
+      SoundService.playTapeTransportLatch();
+    } else {
+      SoundService.playTapeSwitchClick();
     }
   }
 
@@ -47,6 +55,7 @@ class _PhysicalMatteButtonState extends State<PhysicalMatteButton> {
     if (_isPressed) {
       setState(() => _isPressed = false);
     }
+    _dispatchTap();
   }
 
   void _handleTapCancel() {
@@ -59,12 +68,14 @@ class _PhysicalMatteButtonState extends State<PhysicalMatteButton> {
     if (_isPressed) {
       setState(() => _isPressed = false);
     }
-    if (widget.isTransportKey) {
-      SoundService.playTapeTransportLatch();
-    } else {
-      SoundService.playTapeSwitchClick();
+    _dispatchTap();
+  }
+
+  void _dispatchTap() {
+    if (!_tapDispatched) {
+      _tapDispatched = true;
+      widget.onTap();
     }
-    widget.onTap();
   }
 
   @override
@@ -87,6 +98,8 @@ class _PhysicalMatteButtonState extends State<PhysicalMatteButton> {
         ? const Color(0x66000000)
         : const Color(0x22000000);
 
+    const double maxDepression = 4.5;
+
     return GestureDetector(
       onTapDown: _handleTapDown,
       onTapUp: _handleTapUp,
@@ -94,10 +107,12 @@ class _PhysicalMatteButtonState extends State<PhysicalMatteButton> {
       onTap: _handleTap,
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 35),
-        margin: EdgeInsets.only(
-          top: _isPressed ? 5.5 : 0.0,
-          bottom: _isPressed ? 0.0 : 5.5,
+        duration: const Duration(milliseconds: 30),
+        curve: Curves.easeOutCubic,
+        transform: Matrix4.translationValues(
+          0.0,
+          _isPressed ? maxDepression : 0.0,
+          0.0,
         ),
         padding: widget.padding,
         decoration: BoxDecoration(
@@ -109,18 +124,18 @@ class _PhysicalMatteButtonState extends State<PhysicalMatteButton> {
               : BorderRadius.zero,
           border: Border.all(color: borderCol, width: 1.5),
           boxShadow: [
-            // Solid physical extrusion edge
+            // Solid physical extrusion edge that depresses into the chassis
             BoxShadow(
               color: shadowHard,
-              offset: Offset(0, _isPressed ? 1.0 : 5.5),
+              offset: Offset(0, _isPressed ? 1.0 : maxDepression),
               blurRadius: 0,
             ),
             // Diffuse ambient contact shadow
             if (!_isPressed)
               BoxShadow(
                 color: shadowAmbient,
-                offset: const Offset(0, 8.0),
-                blurRadius: 12.0,
+                offset: const Offset(0, 7.0),
+                blurRadius: 10.0,
               ),
           ],
         ),

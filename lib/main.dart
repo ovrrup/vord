@@ -5,15 +5,17 @@ import 'src/screens/timer_screen.dart';
 import 'src/services/app_settings_service.dart';
 import 'src/services/behaviour_service.dart';
 import 'src/services/session_service.dart';
+import 'src/services/sound_service.dart';
 import 'src/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize atomic settings, behaviour preferences, and offline database
+  // Initialize atomic settings, behaviour preferences, offline database, and audio FX
   await AppSettingsService.instance.init();
   await BehaviourService.instance.init();
   await SessionService.instance.init();
+  await SoundService.init();
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
