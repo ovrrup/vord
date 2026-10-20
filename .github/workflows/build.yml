@@ -50,41 +50,7 @@ jobs:
             sed -i 's/compileSdk = .*/compileSdk = 36/' android/app/build.gradle.kts || true
           fi
           # Enable Java 8+ core library desugaring required by flutter_local_notifications
-          python3 -c "
-import os
-
-kts_path = 'android/app/build.gradle.kts'
-if os.path.exists(kts_path):
-    with open(kts_path, 'r') as f:
-        kts = f.read()
-    if 'compileOptions {' in kts:
-        if 'isCoreLibraryDesugaringEnabled' not in kts:
-            kts = kts.replace('compileOptions {', 'compileOptions {\n        isCoreLibraryDesugaringEnabled = true')
-    else:
-        kts += '\nandroid {\n    compileOptions {\n        isCoreLibraryDesugaringEnabled = true\n    }\n}\n'
-    if 'defaultConfig {' in kts and 'multiDexEnabled' not in kts:
-        kts = kts.replace('defaultConfig {', 'defaultConfig {\n        multiDexEnabled = true')
-    if 'coreLibraryDesugaring' not in kts:
-        kts += '\ndependencies {\n    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.1.4\")\n}\n'
-    with open(kts_path, 'w') as f:
-        f.write(kts)
-
-groovy_path = 'android/app/build.gradle'
-if os.path.exists(groovy_path):
-    with open(groovy_path, 'r') as f:
-        groovy = f.read()
-    if 'compileOptions {' in groovy:
-        if 'coreLibraryDesugaringEnabled' not in groovy:
-            groovy = groovy.replace('compileOptions {', 'compileOptions {\n        coreLibraryDesugaringEnabled true')
-    else:
-        groovy += '\nandroid {\n    compileOptions {\n        coreLibraryDesugaringEnabled true\n    }\n}\n'
-    if 'defaultConfig {' in groovy and 'multiDexEnabled' not in groovy:
-        groovy = groovy.replace('defaultConfig {', 'defaultConfig {\n        multiDexEnabled true')
-    if 'coreLibraryDesugaring' not in groovy:
-        groovy += \"\ndependencies {\n    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'\n}\n\"
-    with open(groovy_path, 'w') as f:
-        f.write(groovy)
-"
+          python3 .github/scripts/configure_android.py || true
           if [ -f "android/app/src/main/AndroidManifest.xml" ]; then
             sed -i 's/<manifest [^>]*>/&\n    <uses-permission android:name="android.permission.INTERNET"\/>\n    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"\/>\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"\/>\n    <uses-permission android:name="android.permission.VIBRATE"\/>\n    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"\/>\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"\/>\n    <uses-permission android:name="android.permission.USE_EXACT_ALARM"\/>/' android/app/src/main/AndroidManifest.xml || true
           fi
