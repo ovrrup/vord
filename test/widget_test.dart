@@ -812,14 +812,15 @@ void main() {
       await tester.tap(find.text('BEHAVIOUR'));
       await tester.pumpAndSettle();
 
-      // Verify BehaviourScreen is rendered with 3 feature toggle cards
+      // Verify BehaviourScreen is rendered with feature toggle cards
       expect(find.byType(BehaviourScreen), findsOneWidget);
       expect(find.text('HIDE STATUS BAR (DEVICE)'), findsOneWidget);
       expect(find.text('HIDE NAVIGATION BAR (DEVICE)'), findsOneWidget);
       expect(find.text('SHOW TIME COUNTER'), findsOneWidget);
+      expect(find.text('SMART STUDY REMINDERS'), findsOneWidget);
 
-      // Verify default states: only hide status bar is ON, others OFF
-      expect(find.text('ON'), findsOneWidget);
+      // Verify default states: hide status bar and smart reminders are ON, others OFF
+      expect(find.text('ON'), findsNWidgets(2));
       expect(find.text('OFF'), findsNWidgets(2));
     },
   );
